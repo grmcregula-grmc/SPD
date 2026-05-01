@@ -26,9 +26,9 @@ const supabaseOptions = {
   },
   global: {
     // Custom fetch para capturar erros de rede silenciosamente em modo Guest
-    fetch: async (url: string, options: any) => {
+    fetch: async (input: any, init?: any) => {
       try {
-        const response = await fetch(url, options);
+        const response = await fetch(input, init);
         return response;
       } catch (err: any) {
         if (!isValidConfig || err.message?.includes('fetch') || err.name === 'TypeError') {
