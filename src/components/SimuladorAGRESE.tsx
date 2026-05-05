@@ -211,26 +211,24 @@ export default function SimuladorAGRESE() {
               </select>
               {gravidadeId && (
                 <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', background: 'rgba(59,130,246,0.05)', padding: '10px', borderRadius: 8 }}>
-                  <b>Base Legal:</b> {MATRIZ_INFRACOES.find(m => m.id === gravidadeId)?.fundamentacao}
+                  <div style={{ marginBottom: 6 }}><b>Base Legal:</b> {MATRIZ_INFRACOES.find(m => m.id === gravidadeId)?.fundamentacao}</div>
+                  <b>Hipóteses de Enquadramento:</b>
+                  <ul style={{ margin: '4px 0 0 0', paddingLeft: 20 }}>
+                    {MATRIZ_INFRACOES.find(m => m.id === gravidadeId)?.hipoteses?.map((h, i) => (
+                      <li key={i} style={{ marginBottom: 4 }}>{h}</li>
+                    ))}
+                  </ul>
                 </div>
               )}
-              <ParamInput
-                label="Quantidade de UFP/SE"
-                value={ufpQuantidade}
-                onChange={setUfpQuantidade}
-                min={100}
-                max={10000}
-                step={100}
-                tooltip="Piso: 100 UFP/SE | Teto: 10.000 UFP/SE (Cl. 22.1.2 CPA)"
-              />
-              <div style={{ marginTop: 10 }}>
-                <label className="spd-label">Critério 1: Gravidade do Descumprimento (Justificativa)</label>
-                <input 
-                  className="spd-input" 
-                  placeholder="Justifique o impacto..."
-                  value={justificativaGravidade}
-                  onChange={(e) => setJustificativaGravidade(e.target.value)}
-                  style={{ width: '100%' }}
+              <div style={{ opacity: 0.7, pointerEvents: 'none' }}>
+                <ParamInput
+                  label="Quantidade de UFP/SE (Fixo por Lei)"
+                  value={ufpQuantidade}
+                  onChange={() => {}}
+                  min={100}
+                  max={10000}
+                  step={100}
+                  tooltip="Valor fixado conforme a gravidade da infração."
                 />
               </div>
             </div>
@@ -399,34 +397,6 @@ export default function SimuladorAGRESE() {
             </div>
           </div>
         )}
-
-        {/* Presets rápidos */}
-        <div className="glass-card" style={{ padding: 20 }}>
-          <SectionHeader
-            title="Simulações Predefinidas"
-            subtitle="Carregue cenários prontos para teste rápido"
-            icon="⚡"
-            badge="Quick Load"
-            badgeColor="#8b5cf6"
-          />
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
-            {presets.map((p) => (
-              <button
-                key={p.label}
-                className="btn-ghost"
-                style={{ textAlign: 'left', padding: '8px 12px', fontSize: '0.78rem' }}
-                onClick={() => {
-                  setUfpQuantidade(p.ufp);
-                  setAgravantesIds(p.ag);
-                  setAtenuantesIds(p.at);
-                  setMesesMora(p.mora);
-                }}
-              >
-                {p.label}
-              </button>
-            ))}
-          </div>
-        </div>
 
         {/* Parâmetros base */}
         <div className="glass-card" style={{ padding: 20 }}>

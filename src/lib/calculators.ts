@@ -147,32 +147,55 @@ export const MATRIZ_INFRACOES = [
     id: 'leve', 
     nome: 'Infração Leve', 
     ufp: 100, 
-    fundamentacao: 'Art. 24-A, § 2º, I; e § 3º, I e II', 
-    desc: 'Não fornecer, no prazo fixado, documento e/ou dado solicitado pela AGRESE (a multa é aplicada por cada documento ou dado não fornecido). Outras hipóteses que venham a ser previstas em atos regulamentares da AGRESE.',
+    fundamentacao: 'Art. 24-A, § 2º, I; e § 3º, incisos I e II', 
+    desc: 'Não fornecer, no prazo fixado, documento e/ou dado solicitado pela AGRESE. Outras hipóteses previstas em atos regulamentares.',
+    hipoteses: [
+      'Não fornecer, no prazo fixado, documento e/ou dado solicitado pela AGRESE (a multa é aplicada por cada documento ou dado não fornecido).',
+      'Outras hipóteses que venham a ser previstas em atos regulamentares da AGRESE.'
+    ],
     baseLegal: 'Lei Nº 6.661/2009'
   },
   { 
     id: 'media', 
     nome: 'Infração Média', 
     ufp: 1000, 
-    fundamentacao: 'Art. 24-A, § 2º, II; e § 4º, I a V', 
-    desc: 'Reincidência em infrações leves anteriores. Sonegação de informações solicitadas pela agência reguladora. Descumprimento, no prazo fixado, de determinações feitas pela AGRESE. Falha na prestação do serviço concedido, permitido ou autorizado. Outras hipóteses previstas em ato regulamentar.',
+    fundamentacao: 'Art. 24-A, § 2º, II; e § 4º, incisos I a V', 
+    desc: 'Reincidência em infrações leves anteriores. Sonegação de informações. Descumprimento de prazos. Falha na prestação do serviço.',
+    hipoteses: [
+      'Reincidência em infrações leves anteriores.',
+      'Sonegação de informações solicitadas pela agência reguladora.',
+      'Descumprimento, no prazo fixado, de determinações feitas pela AGRESE.',
+      'Falha na prestação do serviço concedido, permitido ou autorizado.',
+      'Outras hipóteses previstas em ato regulamentar.'
+    ],
     baseLegal: 'Lei Nº 6.661/2009'
   },
   { 
     id: 'grave', 
     nome: 'Infração Grave', 
     ufp: 5000, 
-    fundamentacao: 'Art. 24-A, § 2º, III; e § 5º, I a VI', 
-    desc: 'Reincidência nas infrações médias (sonegação, descumprimento de prazos, falhas no serviço, etc.). Fornecimento de informações e documentos adulterados. Obstrução da fiscalização realizada pela AGRESE. Descumprimento da legislação, dos atos regulamentares da AGRESE ou do próprio contrato. Grave violação dos padrões de qualidade dos serviços. Outras hipóteses previstas em ato regulamentar.',
+    fundamentacao: 'Art. 24-A, § 2º, III; e § 5º, incisos I a VI', 
+    desc: 'Reincidência nas infrações médias. Informações adulteradas. Obstrução da fiscalização. Descumprimento da legislação. Grave violação de qualidade.',
+    hipoteses: [
+      'Reincidência nas infrações médias (sonegação, descumprimento de prazos, falhas no serviço, etc.).',
+      'Fornecimento de informações e documentos adulterados.',
+      'Obstrução da fiscalização realizada pela AGRESE.',
+      'Descumprimento da legislação, dos atos regulamentares da AGRESE ou do próprio contrato.',
+      'Grave violação dos padrões de qualidade dos serviços.',
+      'Outras hipóteses previstas em ato regulamentar.'
+    ],
     baseLegal: 'Lei Nº 6.661/2009'
   },
   { 
     id: 'gravissima', 
     nome: 'Infração Gravíssima', 
     ufp: 10000, 
-    fundamentacao: 'Art. 24-A, § 2º, IV; e § 6º, I e II', 
-    desc: 'Reincidência nas condutas classificadas como graves (como fornecimento de documentos adulterados, obstrução à fiscalização, descumprimento de legislação/contratos e grave violação dos padrões de qualidade). Outras hipóteses previstas em ato regulamentar.',
+    fundamentacao: 'Art. 24-A, § 2º, IV; e § 6º, incisos I e II', 
+    desc: 'Reincidência nas condutas classificadas como graves. Outras hipóteses previstas em ato regulamentar.',
+    hipoteses: [
+      'Reincidência nas condutas classificadas como graves (como fornecimento de documentos adulterados, obstrução à fiscalização, descumprimento de legislação/contratos e grave violação dos padrões de qualidade).',
+      'Outras hipóteses previstas em ato regulamentar.'
+    ],
     baseLegal: 'Lei Nº 6.661/2009'
   }
 ];
