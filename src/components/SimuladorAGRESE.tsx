@@ -198,7 +198,7 @@ export default function SimuladorAGRESE() {
                   setGravidadeId(e.target.value);
                   if (matriz) {
                     setUfpQuantidade(matriz.ufp);
-                    setDescricaoOcorrencia(matriz.desc);
+                    setDescricaoOcorrencia('');
                   }
                 }}
               >
@@ -210,14 +210,22 @@ export default function SimuladorAGRESE() {
                 ))}
               </select>
               {gravidadeId && (
-                <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', background: 'rgba(59,130,246,0.05)', padding: '10px', borderRadius: 8 }}>
+                <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', background: 'rgba(59,130,246,0.05)', padding: '10px', borderRadius: 8, marginTop: 5 }}>
                   <div style={{ marginBottom: 6 }}><b>Base Legal:</b> {MATRIZ_INFRACOES.find(m => m.id === gravidadeId)?.fundamentacao}</div>
-                  <b>Hipóteses de Enquadramento:</b>
-                  <ul style={{ margin: '4px 0 0 0', paddingLeft: 20 }}>
+                  <label className="spd-label" style={{ marginTop: 10, display: 'block' }}>Hipótese de Enquadramento</label>
+                  <select 
+                    className="spd-input" 
+                    style={{ width: '100%', cursor: 'pointer', marginTop: 5, fontSize: '0.75rem' }}
+                    onChange={(e) => {
+                      setDescricaoOcorrencia(e.target.value);
+                    }}
+                    value={MATRIZ_INFRACOES.find(m => m.id === gravidadeId)?.hipoteses?.includes(descricaoOcorrencia) ? descricaoOcorrencia : ""}
+                  >
+                    <option value="">Selecione o enquadramento exato...</option>
                     {MATRIZ_INFRACOES.find(m => m.id === gravidadeId)?.hipoteses?.map((h, i) => (
-                      <li key={i} style={{ marginBottom: 4 }}>{h}</li>
+                      <option key={i} value={h}>{h}</option>
                     ))}
-                  </ul>
+                  </select>
                 </div>
               )}
               <div style={{ opacity: 0.7, pointerEvents: 'none' }}>
