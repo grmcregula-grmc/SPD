@@ -410,6 +410,8 @@ export function calcularMultaAGRESE(params: {
 
 export interface ResultadoTaxaFiscalizacao {
   valor_original: number;
+  meses_atraso: number;
+  selic_mensal_perc: number;
   selic_acumulada: number;
   juros_valor: number;
   multa_percentual: number;
@@ -418,34 +420,67 @@ export interface ResultadoTaxaFiscalizacao {
   breakdown: BreakdownItem[];
 }
 
+/**
+ * Calcula acréscimos da Taxa de Fiscalização não recolhida no prazo.
+ * § 4º Lei 6.661/2009 — regras:
+ *   I  — Juros SELIC acumulados mês a mês (contados do mês SEGUINTE ao vencimento)
+ *   II — Multa de mora:
+ *          2%  se pago até o ÚLTIMO DIA ÚTIL do MÊS SUBSEQUENTE (atraso ≤ 1 mês)
+ *         10%  se pago POSTERIORMENTE (atraso > 1 mês)
+ * § 5º — Juros NÃO incidem sobre a multa de mora.
+ *
+ * O ÚNICO parâmetro de tempo é `meses_atraso`, que determina
+ * SIMULTANEAMENTE a alíquota SELIC acumulada e a alíquota da multa.
+ */
 export function calcularTaxaFiscalizacao(params: {
   valor_original: number;
-  selic_acumulada: number;
-  pago_mes_subsequente: boolean;
+  meses_atraso: number;       // nº de meses de atraso (determina tudo)
+  selic_mensal_perc?: number; // taxa SELIC mensal média (padrão 1.07% ≈ 13% a.a.)
 }): ResultadoTaxaFiscalizacao {
-  const { valor_original, selic_acumulada, pago_mes_subsequente } = params;
-  
+  const { valor_original, meses_atraso } = params;
+  const selic_mensal = params.selic_mensal_perc ?? 1.07; // % ao mês
+
+  // I — Juros SELIC: acumulados mês a mês (regime composto simplificado)
+  // Contados do mês seguinte, portanto: meses_atraso meses de SELIC
+  const selic_acumulada = parseFloat(
+    (((1 + selic_mensal / 100) ** meses_atraso - 1) * 100).toFixed(4)
+  );
   const juros_valor = valor_original * (selic_acumulada / 100);
-  const multa_percentual = pago_mes_subsequente ? 2 : 10;
+
+  // II — Multa de mora: 2% se ≤ 1 mês, 10% se > 1 mês
+  // (§5º) juros NÃO incidem sobre a multa
+  const multa_percentual = meses_atraso <= 1 ? 2 : 10;
   const multa_valor = valor_original * (multa_percentual / 100);
-  
+
   const valor_total = valor_original + juros_valor + multa_valor;
-  
+
   const breakdown: BreakdownItem[] = [
     { descricao: 'Valor Original da Taxa', valor: valor_original, tipo: 'base' },
-    { descricao: `Juros SELIC Acumulados (${selic_acumulada.toFixed(2)}%)`, valor: juros_valor, tipo: 'mora', percentual: selic_acumulada },
-    { descricao: `Multa de Mora (${multa_percentual}%) - Art. 24, § 4º, II`, valor: multa_valor, tipo: 'agravante', percentual: multa_percentual },
-    { descricao: 'Valor Total Devido', valor: valor_total, tipo: 'final' }
+    {
+      descricao: `I — Juros SELIC Acumulados (${meses_atraso} ${meses_atraso === 1 ? 'mês' : 'meses'} × ${selic_mensal.toFixed(2)}%/mês = ${selic_acumulada.toFixed(2)}%)`,
+      valor: juros_valor,
+      tipo: 'mora',
+      percentual: selic_acumulada,
+    },
+    {
+      descricao: `II — Multa de Mora (${multa_percentual}%)${multa_percentual === 2 ? ' — pago no mês subsequente' : ' — pago após mês subsequente'} [§ 5º: não incide sobre juros]`,
+      valor: multa_valor,
+      tipo: 'agravante',
+      percentual: multa_percentual,
+    },
+    { descricao: 'Valor Total Devido', valor: valor_total, tipo: 'final' },
   ];
 
   return {
     valor_original,
+    meses_atraso,
+    selic_mensal_perc: selic_mensal,
     selic_acumulada,
     juros_valor,
     multa_percentual,
     multa_valor,
     valor_total,
-    breakdown
+    breakdown,
   };
 }
 

@@ -53,9 +53,9 @@ export default function SimuladorAGRESE() {
   const [reincidenteEnvio, setReincidenteEnvio] = useState(false);
   
   // States Específicos - Taxa de Fiscalização
-  const [valorTaxaOriginal, setValorTaxaOriginal] = useState(1000);
-  const [selicAcumulada, setSelicAcumulada] = useState(0);
-  const [pagoNoMesSubsequente, setPagoNoMesSubsequente] = useState(true);
+  const [valorTaxaOriginal, setValorTaxaOriginal] = useState(100000);
+  const [mesesAtraso, setMesesAtraso] = useState(1);
+  const [selicMensal, setSelicMensal] = useState(1.07); // 1.07% a.m. ≈ 13% a.a.
   const [resultadoTaxa, setResultadoTaxa] = useState<ResultadoTaxaFiscalizacao | null>(null);
 
   const { addToHistory } = useEstimates();
@@ -78,8 +78,8 @@ export default function SimuladorAGRESE() {
     if (categoriaSimulacao === 'taxa') {
       const resTaxa = calcularTaxaFiscalizacao({
         valor_original: valorTaxaOriginal,
-        selic_acumulada: selicAcumulada,
-        pago_mes_subsequente: pagoNoMesSubsequente
+        meses_atraso: mesesAtraso,
+        selic_mensal_perc: selicMensal,
       });
       setResultadoTaxa(resTaxa);
       setResultado(null);
@@ -101,7 +101,7 @@ export default function SimuladorAGRESE() {
       setResultado(res);
       setResultadoTaxa(null);
     }
-  }, [categoriaSimulacao, valorTaxaOriginal, selicAcumulada, pagoNoMesSubsequente, ufpQuantidade, reincidenteEnvio, valorUfp, agravantesIds, atenantesIds, mesesMora, ipcaAnual]);
+  }, [categoriaSimulacao, valorTaxaOriginal, mesesAtraso, selicMensal, ufpQuantidade, reincidenteEnvio, valorUfp, agravantesIds, atenantesIds, mesesMora, ipcaAnual]);
 
   const toggleAgravante = (id: string) => {
     setAgravantesIds((prev) => prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]);
@@ -368,43 +368,94 @@ export default function SimuladorAGRESE() {
           <div className="glass-card" style={{ padding: 20, border: '1px solid rgba(59,130,246,0.25)' }}>
             <SectionHeader
               title="Atraso na Taxa de Fiscalização"
-              subtitle="Lei Nº 6.661/2009, Art. 24, § 4º"
+              subtitle="Lei Nº 6.661/2009, Art. 24, §§ 4º e 5º"
               icon="💰"
               badge="Art. 24"
               badgeColor="#3b82f6"
             />
+
+            {/* Nota legal */}
+            <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', background: 'rgba(59,130,246,0.05)', borderRadius: 8, padding: '10px 12px', marginBottom: 16, lineHeight: 1.6 }}>
+              <b>§ 4º</b> Juros de mora contados do mês seguinte ao vencimento (SELIC), acumulados mês a mês.<br />
+              <b>§ 5º</b> Os juros de mora <b>não incidem</b> sobre o valor da multa de mora.
+            </div>
+
             <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
               <ParamInput
-                label="Valor Original da Taxa"
+                label="Valor Original da Taxa (R$)"
                 value={valorTaxaOriginal}
                 onChange={setValorTaxaOriginal}
                 min={1}
-                step={100}
+                step={1000}
                 unit=" R$"
               />
-              <ParamInput
-                label="I - Juros de Mora (Taxa SELIC Acumulada %)"
-                value={selicAcumulada}
-                onChange={setSelicAcumulada}
-                min={0}
-                step={0.1}
-                unit="%"
-                tooltip="Juros de mora contados do mês seguinte ao do vencimento, de acordo com a variação da taxa SELIC."
-              />
-              <label style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer', padding: '10px', background: pagoNoMesSubsequente ? 'rgba(16,185,129,0.1)' : 'rgba(239,68,68,0.1)', borderRadius: 8 }}>
-                <input 
-                  type="checkbox" 
-                  className="spd-checkbox"
-                  checked={pagoNoMesSubsequente}
-                  onChange={(e) => setPagoNoMesSubsequente(e.target.checked)}
-                />
-                <div>
-                  <div style={{ fontSize: '0.8rem', fontWeight: 600 }}>II - Multa de Mora (Prazo de Pagamento)</div>
-                  <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>
-                    Marcado = Pago no mês subsequente (Multa 2%). Desmarcado = Pago posteriormente (Multa 10%).
-                  </div>
+
+              {/* Slider de meses — único fator de tempo */}
+              <div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+                  <label className="spd-label" style={{ margin: 0 }}>Meses de Atraso</label>
+                  <span style={{
+                    fontWeight: 700, fontSize: '1rem',
+                    color: mesesAtraso <= 1 ? '#10b981' : '#ef4444',
+                    background: mesesAtraso <= 1 ? 'rgba(16,185,129,0.1)' : 'rgba(239,68,68,0.1)',
+                    padding: '2px 10px', borderRadius: 20
+                  }}>
+                    {mesesAtraso} {mesesAtraso === 1 ? 'mês' : 'meses'}
+                  </span>
                 </div>
-              </label>
+                <input
+                  type="range"
+                  min={1} max={36} step={1}
+                  value={mesesAtraso}
+                  onChange={(e) => setMesesAtraso(Number(e.target.value))}
+                  style={{ width: '100%', accentColor: mesesAtraso <= 1 ? '#10b981' : '#ef4444' }}
+                />
+                <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: '0.7rem', color: 'var(--text-muted)', marginTop: 4 }}>
+                  <span>1 mês (multa 2%)</span>
+                  <span>2+ meses (multa 10%)</span>
+                  <span>36 meses</span>
+                </div>
+              </div>
+
+              {/* Alerta automático da multa */}
+              <div style={{
+                padding: '10px 14px', borderRadius: 8, fontWeight: 600, fontSize: '0.82rem',
+                background: mesesAtraso <= 1 ? 'rgba(16,185,129,0.1)' : 'rgba(239,68,68,0.1)',
+                border: `1px solid ${mesesAtraso <= 1 ? '#10b981' : '#ef4444'}`,
+                color: mesesAtraso <= 1 ? '#10b981' : '#ef4444',
+              }}>
+                {mesesAtraso <= 1
+                  ? '✅ II — Multa de mora: 2% (pago até o último dia útil do mês subsequente)'
+                  : '⚠️ II — Multa de mora: 10% (pago após o mês subsequente)'}
+              </div>
+
+              <ParamInput
+                label="Taxa SELIC Mensal Média (%/mês)"
+                value={selicMensal}
+                onChange={setSelicMensal}
+                min={0.1}
+                max={3}
+                step={0.01}
+                unit="%"
+                tooltip="SELIC mensal usada para acumular os juros. Padrão: 1,07%/mês ≈ 13,6% a.a. (ajuste conforme Banco Central)."
+              />
+
+              {/* Preview calculado */}
+              <div style={{ background: 'rgba(59,130,246,0.06)', borderRadius: 10, padding: '12px 14px', border: '1px solid rgba(59,130,246,0.15)' }}>
+                <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', marginBottom: 6 }}>Preview (antes de calcular)</div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
+                  <span style={{ fontSize: '0.8rem' }}>I — SELIC acumulada ({mesesAtraso} meses)</span>
+                  <span className="mono" style={{ color: '#f59e0b', fontWeight: 700 }}>
+                    {(((1 + selicMensal / 100) ** mesesAtraso - 1) * 100).toFixed(2)}%
+                  </span>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <span style={{ fontSize: '0.8rem' }}>II — Multa de mora</span>
+                  <span className="mono" style={{ color: mesesAtraso <= 1 ? '#10b981' : '#ef4444', fontWeight: 700 }}>
+                    {mesesAtraso <= 1 ? '2%' : '10%'}
+                  </span>
+                </div>
+              </div>
             </div>
           </div>
         )}
