@@ -188,44 +188,47 @@ export default function SimuladorAGRESE() {
               badgeColor="#3b82f6"
             />
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-              <label className="spd-label">Classificação da Gravidade</label>
+              <label className="spd-label">Hipótese de Enquadramento</label>
               <select 
                 className="spd-input" 
                 style={{ width: '100%', cursor: 'pointer' }}
-                value={gravidadeId}
+                value={gravidadeId && descricaoOcorrencia ? `${gravidadeId}|${descricaoOcorrencia}` : ""}
                 onChange={(e) => {
-                  const matriz = MATRIZ_INFRACOES.find(m => m.id === e.target.value);
-                  setGravidadeId(e.target.value);
+                  const val = e.target.value;
+                  if (!val) {
+                    setGravidadeId("");
+                    setDescricaoOcorrencia("");
+                    return;
+                  }
+                  const [mId, ...rest] = val.split('|');
+                  const hip = rest.join('|');
+                  
+                  setGravidadeId(mId);
+                  setDescricaoOcorrencia(hip);
+                  
+                  const matriz = MATRIZ_INFRACOES.find(m => m.id === mId);
                   if (matriz) {
                     setUfpQuantidade(matriz.ufp);
-                    setDescricaoOcorrencia('');
                   }
                 }}
               >
-                <option value="">Selecione uma gravidade...</option>
+                <option value="">Selecione o enquadramento...</option>
                 {MATRIZ_INFRACOES.map(m => (
-                  <option key={m.id} value={m.id}>
-                    {m.nome} — {m.ufp} UFPs
-                  </option>
+                  <optgroup key={m.id} label={`${m.nome} — ${m.ufp} UFPs`}>
+                    {m.hipoteses?.map((h, i) => (
+                      <option key={`${m.id}-${i}`} value={`${m.id}|${h}`}>
+                        {h.length > 100 ? h.substring(0, 100) + '...' : h}
+                      </option>
+                    ))}
+                  </optgroup>
                 ))}
               </select>
+
               {gravidadeId && (
-                <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', background: 'rgba(59,130,246,0.05)', padding: '10px', borderRadius: 8, marginTop: 5 }}>
+                <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)', background: 'rgba(59,130,246,0.05)', padding: '10px', borderRadius: 8, marginTop: 5 }}>
+                  <div style={{ marginBottom: 6 }}><b>Classificação da Gravidade Automática:</b> {MATRIZ_INFRACOES.find(m => m.id === gravidadeId)?.nome}</div>
                   <div style={{ marginBottom: 6 }}><b>Base Legal:</b> {MATRIZ_INFRACOES.find(m => m.id === gravidadeId)?.fundamentacao}</div>
-                  <label className="spd-label" style={{ marginTop: 10, display: 'block' }}>Hipótese de Enquadramento</label>
-                  <select 
-                    className="spd-input" 
-                    style={{ width: '100%', cursor: 'pointer', marginTop: 5, fontSize: '0.75rem' }}
-                    onChange={(e) => {
-                      setDescricaoOcorrencia(e.target.value);
-                    }}
-                    value={MATRIZ_INFRACOES.find(m => m.id === gravidadeId)?.hipoteses?.includes(descricaoOcorrencia) ? descricaoOcorrencia : ""}
-                  >
-                    <option value="">Selecione o enquadramento exato...</option>
-                    {MATRIZ_INFRACOES.find(m => m.id === gravidadeId)?.hipoteses?.map((h, i) => (
-                      <option key={i} value={h}>{h}</option>
-                    ))}
-                  </select>
+                  <div style={{ fontStyle: 'italic', color: '#666' }}>{descricaoOcorrencia}</div>
                 </div>
               )}
               <div style={{ opacity: 0.7, pointerEvents: 'none' }}>
