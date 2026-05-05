@@ -595,7 +595,8 @@ export function calcularEquacaoD(params: {
 
 export interface ResultadoCombinacao {
   equacao_d: number;
-  multa_agrese: number;
+  multa_agrese_matriz: number;
+  multa_agrese_prazos: number;
   multa_ci: number;
   total_impacto: number;
   descricao_cenario: string;
@@ -612,25 +613,44 @@ export interface TimelineItem {
 
 export function calcularCombinacao(params: {
   desconto_d?: number;
-  ufp_multa_agrese?: number;
+  ufp_multa_agrese_matriz?: number;
+  agravantes_ids_matriz?: string[];
+  atenuantes_ids_matriz?: string[];
+  meses_mora_agrese_matriz?: number;
+  
+  ufp_multa_agrese_prazos?: number;
+  multiplicador_prazos?: number;
+  meses_mora_agrese_prazos?: number;
+
   valor_ufp?: number;
-  agravantes_ids?: string[];
   multa_ci_percentual?: number;
   fatura_mensal?: number;
-  meses_mora_agrese?: number;
 }): ResultadoCombinacao {
   const { desconto_d = 0 } = params;
   
-  let multa_agrese = 0;
-  if (params.ufp_multa_agrese && params.ufp_multa_agrese > 0) {
+  let multa_agrese_matriz = 0;
+  if (params.ufp_multa_agrese_matriz && params.ufp_multa_agrese_matriz > 0) {
     const res = calcularMultaAGRESE({
-      ufp_quantidade: params.ufp_multa_agrese,
+      ufp_quantidade: params.ufp_multa_agrese_matriz,
       valor_ufp: params.valor_ufp,
-      agravantes_ids: params.agravantes_ids ?? [],
-      atenuantes_ids: [],
-      meses_mora: params.meses_mora_agrese ?? 0,
+      agravantes_ids: params.agravantes_ids_matriz ?? [],
+      atenuantes_ids: params.atenuantes_ids_matriz ?? [],
+      meses_mora: params.meses_mora_agrese_matriz ?? 0,
     });
-    multa_agrese = res.valor_com_mora;
+    multa_agrese_matriz = res.valor_com_mora;
+  }
+
+  let multa_agrese_prazos = 0;
+  if (params.ufp_multa_agrese_prazos && params.ufp_multa_agrese_prazos > 0) {
+    const res = calcularMultaAGRESE({
+      ufp_quantidade: params.ufp_multa_agrese_prazos,
+      valor_ufp: params.valor_ufp,
+      agravantes_ids: [],
+      atenuantes_ids: [],
+      meses_mora: params.meses_mora_agrese_prazos ?? 0,
+      multiplicador_base: params.multiplicador_prazos ?? 1,
+    });
+    multa_agrese_prazos = res.valor_com_mora;
   }
 
   let multa_ci = 0;
@@ -638,7 +658,7 @@ export function calcularCombinacao(params: {
     multa_ci = params.fatura_mensal * (params.multa_ci_percentual / 100);
   }
 
-  const total_impacto = desconto_d + multa_agrese + multa_ci;
+  const total_impacto = desconto_d + multa_agrese_matriz + multa_agrese_prazos + multa_ci;
 
   let acumulado = 0;
   const timeline: TimelineItem[] = [];
@@ -651,15 +671,21 @@ export function calcularCombinacao(params: {
     acumulado += multa_ci;
     timeline.push({ mes: 1, evento: 'Multa CI (Infração Contrato Interdependência)', valor: multa_ci, tipo: 'multa', acumulado });
   }
-  if (multa_agrese > 0) {
-    acumulado += multa_agrese;
-    const meses = params.meses_mora_agrese ?? 0;
-    timeline.push({ mes: meses > 0 ? meses + 1 : 2, evento: `Multa AGRESE (Auto de Infração${meses > 0 ? ' + Mora ' + meses + ' meses' : ''})`, valor: multa_agrese, tipo: 'multa', acumulado });
+  if (multa_agrese_matriz > 0) {
+    acumulado += multa_agrese_matriz;
+    const meses = params.meses_mora_agrese_matriz ?? 0;
+    timeline.push({ mes: meses > 0 ? meses + 1 : 2, evento: `Multa AGRESE Matriz (Auto de Infração${meses > 0 ? ' + Mora ' + meses + ' meses' : ''})`, valor: multa_agrese_matriz, tipo: 'multa', acumulado });
+  }
+  if (multa_agrese_prazos > 0) {
+    acumulado += multa_agrese_prazos;
+    const meses = params.meses_mora_agrese_prazos ?? 0;
+    timeline.push({ mes: meses > 0 ? meses + 1 : 2, evento: `Multa AGRESE Prazos/Omissão (Auto de Infração${meses > 0 ? ' + Mora ' + meses + ' meses' : ''})`, valor: multa_agrese_prazos, tipo: 'multa', acumulado });
   }
 
   return {
     equacao_d: desconto_d,
-    multa_agrese,
+    multa_agrese_matriz,
+    multa_agrese_prazos,
     multa_ci,
     total_impacto,
     descricao_cenario: `Impacto combinado de ${timeline.length} sanções simultâneas`,

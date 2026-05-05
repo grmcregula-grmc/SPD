@@ -5,7 +5,12 @@ import {
   calcularCombinacao,
   calcularEquacaoD,
   calcularMultaAGRESE,
+  calcularUfpEnvioInformacoes,
   MATRIZ_INFRACOES,
+  PRAZOS_ENVIO_AGRESE,
+  ENVIO_INFORMACOES,
+  CRITERIOS_DOSIMETRIA,
+  ATENUANTES_DISPONIVEIS,
   PARAMETROS_DEFAULT,
   formatBRL,
   formatM3,
@@ -29,13 +34,24 @@ export default function SimuladorCombinacao() {
   const [iceEsgoto, setIceEsgoto] = useState(PARAMETROS_DEFAULT.ICE_COBERTURA_ESGOTO);
   const [impostos, setImpostos] = useState(PARAMETROS_DEFAULT.IMPOSTOS_RECEITA);
 
-  // Multa AGRESE params
-  const [usarAGRESE, setUsarAGRESE] = useState(true);
-  const [ufpAgrese, setUfpAgrese] = useState(100);
+  // Multa AGRESE Matriz params
+  const [usarAgreseMatriz, setUsarAgreseMatriz] = useState(true);
+  const [ufpAgreseMatriz, setUfpAgreseMatriz] = useState(100);
   const [gravidadeId, setGravidadeId] = useState<string>('');
-  const [descricaoOcorrencia, setDescricaoOcorrencia] = useState<string>('');
-  const [moresMora, setMesesMora] = useState(0);
-  const [agravantesAgrese, setAgravantesAgrese] = useState<string[]>([]);
+  const [descricaoOcorrenciaMatriz, setDescricaoOcorrenciaMatriz] = useState<string>('');
+  const [mesesMoraMatriz, setMesesMoraMatriz] = useState(0);
+  const [agravantesMatriz, setAgravantesMatriz] = useState<string[]>([]);
+  const [atenuantesMatriz, setAtenuantesMatriz] = useState<string[]>([]);
+
+  // Multa AGRESE Prazos params
+  const [usarAgresePrazos, setUsarAgresePrazos] = useState(false);
+  const [ufpAgresePrazos, setUfpAgresePrazos] = useState(100);
+  const [prazoId, setPrazoId] = useState('');
+  const [tipoEnvio, setTipoEnvio] = useState('');
+  const [nivelGravidadePrazos, setNivelGravidadePrazos] = useState('');
+  const [nivelRelevanciaPrazos, setNivelRelevanciaPrazos] = useState('');
+  const [reincidenteEnvio, setReincidenteEnvio] = useState(false);
+  const [mesesMoraPrazos, setMesesMoraPrazos] = useState(0);
 
   // Multa CI params
   const [usarCI, setUsarCI] = useState(false);
@@ -51,6 +67,13 @@ export default function SimuladorCombinacao() {
     setTarifaMedia(settings.tarifa_media);
     setMargemEbitda(settings.margem_ebitda);
   }, [settings.ipd, settings.tarifa_media, settings.margem_ebitda]);
+
+  React.useEffect(() => {
+    if (tipoEnvio) {
+      const ufp = calcularUfpEnvioInformacoes(tipoEnvio, nivelGravidadePrazos, nivelRelevanciaPrazos);
+      setUfpAgresePrazos(ufp);
+    }
+  }, [tipoEnvio, nivelGravidadePrazos, nivelRelevanciaPrazos]);
 
   const calcular = useCallback(() => {
     let desconto_d = 0;
@@ -69,18 +92,24 @@ export default function SimuladorCombinacao() {
 
     const res = calcularCombinacao({
       desconto_d: usarEquacaoD ? desconto_d : 0,
-      ufp_multa_agrese: usarAGRESE ? ufpAgrese : 0,
+      ufp_multa_agrese_matriz: usarAgreseMatriz ? ufpAgreseMatriz : 0,
+      agravantes_ids_matriz: agravantesMatriz,
+      atenuantes_ids_matriz: atenuantesMatriz,
+      meses_mora_agrese_matriz: mesesMoraMatriz,
+      ufp_multa_agrese_prazos: usarAgresePrazos ? ufpAgresePrazos : 0,
+      multiplicador_prazos: reincidenteEnvio ? 4 : 1,
+      meses_mora_agrese_prazos: mesesMoraPrazos,
       valor_ufp: settings.ufp_valor,
-      agravantes_ids: agravantesAgrese,
       multa_ci_percentual: usarCI ? multatCIPerc : 0,
       fatura_mensal: usarCI ? faturaMensal : 0,
-      meses_mora_agrese: moresMora,
     });
     setResultado(res);
-  }, [usarEquacaoD, volumeNF, ipd, tarifaMedia, margemEbitda, icaAgua, iceEsgoto, impostos, usarAGRESE, ufpAgrese, agravantesAgrese, usarCI, multatCIPerc, faturaMensal, moresMora]);
+  }, [usarEquacaoD, volumeNF, ipd, tarifaMedia, margemEbitda, icaAgua, iceEsgoto, impostos, usarAgreseMatriz, ufpAgreseMatriz, agravantesMatriz, atenuantesMatriz, mesesMoraMatriz, usarAgresePrazos, ufpAgresePrazos, reincidenteEnvio, mesesMoraPrazos, usarCI, multatCIPerc, faturaMensal, settings.ufp_valor]);
 
   const toggleAG = (id: string) =>
-    setAgravantesAgrese((p) => p.includes(id) ? p.filter(x => x !== id) : [...p, id]);
+    setAgravantesMatriz((p) => p.includes(id) ? p.filter(x => x !== id) : [...p, id]);
+  const toggleAT = (id: string) =>
+    setAtenuantesMatriz((p) => p.includes(id) ? p.filter(x => x !== id) : [...p, id]);
 
   const agravantesOpts = [
     { id: 'dolo_fraude', label: 'Dolo / Fraude (+30%)' },
@@ -152,35 +181,35 @@ export default function SimuladorCombinacao() {
           )}
         </div>
 
-        {/* Multa AGRESE */}
+        {/* Multa AGRESE Matriz */}
         <div className="glass-card" style={{ padding: 20 }}>
           <div style={{ marginBottom: 14 }}>
-            <CheckToggle on={usarAGRESE} onToggle={() => setUsarAGRESE(!usarAGRESE)} label="Incluir Multa AGRESE (CPA Cl. 22)" />
+            <CheckToggle on={usarAgreseMatriz} onToggle={() => setUsarAgreseMatriz(!usarAgreseMatriz)} label="Incluir Multa AGRESE (Matriz de Infrações)" />
           </div>
-          {usarAGRESE && (
+          {usarAgreseMatriz && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
               <div>
                 <label className="spd-label">Hipótese de Enquadramento</label>
                 <select 
                   className="spd-input" 
                   style={{ width: '100%', cursor: 'pointer' }}
-                  value={gravidadeId && descricaoOcorrencia ? `${gravidadeId}|${descricaoOcorrencia}` : ""}
+                  value={gravidadeId && descricaoOcorrenciaMatriz ? `${gravidadeId}|${descricaoOcorrenciaMatriz}` : ""}
                   onChange={(e) => {
                     const val = e.target.value;
                     if (!val) {
                       setGravidadeId("");
-                      setDescricaoOcorrencia("");
+                      setDescricaoOcorrenciaMatriz("");
                       return;
                     }
                     const [mId, ...rest] = val.split('|');
                     const hip = rest.join('|');
                     
                     setGravidadeId(mId);
-                    setDescricaoOcorrencia(hip);
+                    setDescricaoOcorrenciaMatriz(hip);
                     
                     const matriz = MATRIZ_INFRACOES.find(m => m.id === mId);
                     if (matriz) {
-                      setUfpAgrese(matriz.ufp);
+                      setUfpAgreseMatriz(matriz.ufp);
                     }
                   }}
                 >
@@ -200,13 +229,13 @@ export default function SimuladorCombinacao() {
                   <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)', background: 'rgba(59,130,246,0.05)', padding: '10px', borderRadius: 8, marginTop: 5 }}>
                     <div style={{ marginBottom: 6 }}><b>Classificação da Gravidade Automática:</b> {MATRIZ_INFRACOES.find(m => m.id === gravidadeId)?.nome}</div>
                     <div style={{ marginBottom: 6 }}><b>Base Legal:</b> {MATRIZ_INFRACOES.find(m => m.id === gravidadeId)?.fundamentacao}</div>
-                    <div style={{ fontStyle: 'italic', color: '#666' }}>{descricaoOcorrencia}</div>
+                    <div style={{ fontStyle: 'italic', color: '#666' }}>{descricaoOcorrenciaMatriz}</div>
                   </div>
                 )}
                 <div style={{ opacity: 0.7, pointerEvents: 'none', marginTop: 12 }}>
                   <ParamInput
                     label="Quantidade de UFP/SE (Fixo por Lei)"
-                    value={ufpAgrese}
+                    value={ufpAgreseMatriz}
                     onChange={() => {}}
                     min={100}
                     max={10000}
@@ -214,32 +243,161 @@ export default function SimuladorCombinacao() {
                   />
                 </div>
               </div>
-              <ParamInput label="Meses com Mora" value={moresMora} onChange={setMesesMora} min={0} max={60} step={1} />
-              <div>
-                <label className="spd-label">Agravantes AGRESE</label>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                  {agravantesOpts.map((ag) => (
-                    <label key={ag.id} style={{
-                      display: 'flex', alignItems: 'center', gap: 8, padding: '7px 10px',
-                      borderRadius: 8, cursor: 'pointer',
-                      background: agravantesAgrese.includes(ag.id) ? 'rgba(239,68,68,0.08)' : 'transparent',
-                      border: `1px solid ${agravantesAgrese.includes(ag.id) ? 'rgba(239,68,68,0.2)' : 'rgba(59,130,246,0.08)'}`,
-                    }}>
-                      <input type="checkbox" className="spd-checkbox"
-                        checked={agravantesAgrese.includes(ag.id)}
-                        onChange={() => toggleAG(ag.id)} />
-                      <span style={{ fontSize: '0.78rem', color: agravantesAgrese.includes(ag.id) ? '#dc2626' : 'var(--text-secondary)' }}>
-                        {ag.label}
-                      </span>
-                    </label>
-                  ))}
+              <ParamInput label="Meses com Mora" value={mesesMoraMatriz} onChange={setMesesMoraMatriz} min={0} max={60} step={1} />
+              
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+                <div>
+                  <label className="spd-label">Agravantes</label>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                    {agravantesOpts.map((ag) => (
+                      <label key={ag.id} style={{
+                        display: 'flex', alignItems: 'center', gap: 8, padding: '7px 10px',
+                        borderRadius: 8, cursor: 'pointer',
+                        background: agravantesMatriz.includes(ag.id) ? 'rgba(239,68,68,0.08)' : 'transparent',
+                        border: `1px solid ${agravantesMatriz.includes(ag.id) ? 'rgba(239,68,68,0.2)' : 'rgba(59,130,246,0.08)'}`,
+                      }}>
+                        <input type="checkbox" className="spd-checkbox"
+                          checked={agravantesMatriz.includes(ag.id)}
+                          onChange={() => toggleAG(ag.id)} />
+                        <span style={{ fontSize: '0.75rem', color: agravantesMatriz.includes(ag.id) ? '#dc2626' : 'var(--text-secondary)' }}>
+                          {ag.label}
+                        </span>
+                      </label>
+                    ))}
+                  </div>
+                </div>
+                <div>
+                  <label className="spd-label">Atenuantes</label>
+                  <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                    {ATENUANTES_DISPONIVEIS.map((at) => (
+                      <label key={at.id} style={{
+                        display: 'flex', alignItems: 'center', gap: 8, padding: '7px 10px',
+                        borderRadius: 8, cursor: 'pointer',
+                        background: atenuantesMatriz.includes(at.id) ? 'rgba(16,185,129,0.08)' : 'transparent',
+                        border: `1px solid ${atenuantesMatriz.includes(at.id) ? 'rgba(16,185,129,0.2)' : 'rgba(59,130,246,0.08)'}`,
+                      }}>
+                        <input type="checkbox" className="spd-checkbox"
+                          checked={atenuantesMatriz.includes(at.id)}
+                          onChange={() => toggleAT(at.id)} />
+                        <span style={{ fontSize: '0.75rem', color: atenuantesMatriz.includes(at.id) ? '#10b981' : 'var(--text-secondary)' }}>
+                          {at.nome}
+                        </span>
+                      </label>
+                    ))}
+                  </div>
                 </div>
               </div>
+
               <div style={{ background: 'rgba(59,130,246,0.06)', borderRadius: 8, padding: '8px 12px' }}>
                 <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                  <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>Estimativa AGRESE:</span>
+                  <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>Estimativa Matriz:</span>
                   <span className="mono" style={{ fontSize: '0.85rem', fontWeight: 700, color: '#60a5fa' }}>
-                    {formatBRL(calcularMultaAGRESE({ ufp_quantidade: ufpAgrese, agravantes_ids: agravantesAgrese, atenuantes_ids: [], meses_mora: moresMora }).valor_com_mora)}
+                    {formatBRL(calcularMultaAGRESE({ ufp_quantidade: ufpAgreseMatriz, agravantes_ids: agravantesMatriz, atenuantes_ids: atenuantesMatriz, meses_mora: mesesMoraMatriz, valor_ufp: settings.ufp_valor }).valor_com_mora)}
+                  </span>
+                </div>
+              </div>
+            </div>
+          )}
+        </div>
+
+        {/* Multa AGRESE Prazos */}
+        <div className="glass-card" style={{ padding: 20 }}>
+          <div style={{ marginBottom: 14 }}>
+            <CheckToggle on={usarAgresePrazos} onToggle={() => setUsarAgresePrazos(!usarAgresePrazos)} label="Incluir Multa AGRESE (Prazos / Omissão)" />
+          </div>
+          {usarAgresePrazos && (
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+              <label className="spd-label">Prazo Descumprido</label>
+              <select 
+                className="spd-input" 
+                style={{ width: '100%', cursor: 'pointer' }}
+                value={prazoId}
+                onChange={(e) => {
+                  setPrazoId(e.target.value);
+                  const prazo = PRAZOS_ENVIO_AGRESE.find(p => p.id === e.target.value);
+                  if (prazo && !tipoEnvio) setUfpAgresePrazos(100);
+                }}
+              >
+                <option value="">Selecione o tipo de envio...</option>
+                {PRAZOS_ENVIO_AGRESE.map(p => (
+                  <option key={p.id} value={p.id}>
+                    {p.nome} ({p.prazo})
+                  </option>
+                ))}
+              </select>
+              
+              <label className="spd-label">Tipo de Conduta</label>
+              <select 
+                className="spd-input" 
+                style={{ width: '100%', cursor: 'pointer' }}
+                value={tipoEnvio}
+                onChange={(e) => setTipoEnvio(e.target.value)}
+              >
+                <option value="">Selecione o tipo de conduta...</option>
+                {ENVIO_INFORMACOES.map(e => (
+                  <option key={e.id} value={e.id}>
+                    {e.nome} (Base: {e.min_ufp} a {e.max_ufp} UFPs)
+                  </option>
+                ))}
+              </select>
+
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+                <div>
+                  <label className="spd-label">Gravidade (Critério 1)</label>
+                  <select 
+                    className="spd-input" 
+                    value={nivelGravidadePrazos}
+                    onChange={(e) => setNivelGravidadePrazos(e.target.value)}
+                    style={{ width: '100%' }}
+                  >
+                    <option value="">Nível...</option>
+                    {CRITERIOS_DOSIMETRIA.map(c => (
+                      <option key={c.id} value={c.id}>{c.nome}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <label className="spd-label">Relevância (Critério 2)</label>
+                  <select 
+                    className="spd-input" 
+                    value={nivelRelevanciaPrazos}
+                    onChange={(e) => setNivelRelevanciaPrazos(e.target.value)}
+                    style={{ width: '100%' }}
+                  >
+                    <option value="">Nível...</option>
+                    {CRITERIOS_DOSIMETRIA.map(c => (
+                      <option key={c.id} value={c.id}>{c.nome}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              <div style={{ opacity: 0.7, pointerEvents: 'none' }}>
+                <ParamInput
+                  label="UFP/SE Base Calculada"
+                  value={ufpAgresePrazos}
+                  onChange={() => {}}
+                  min={100} max={10000} step={1}
+                />
+              </div>
+
+              <label style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer', padding: '10px', background: reincidenteEnvio ? 'rgba(239,68,68,0.1)' : 'var(--bg-secondary)', borderRadius: 8 }}>
+                <input 
+                  type="checkbox" 
+                  className="spd-checkbox"
+                  checked={reincidenteEnvio}
+                  onChange={(e) => setReincidenteEnvio(e.target.checked)}
+                />
+                <span style={{ fontSize: '0.8rem', fontWeight: 600 }}>Reincidência (Art. 6º, caput) - Multiplica x4</span>
+              </label>
+
+              <ParamInput label="Meses com Mora" value={mesesMoraPrazos} onChange={setMesesMoraPrazos} min={0} max={60} step={1} />
+
+              <div style={{ background: 'rgba(59,130,246,0.06)', borderRadius: 8, padding: '8px 12px' }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                  <span style={{ fontSize: '0.75rem', color: 'var(--text-secondary)' }}>Estimativa Prazos:</span>
+                  <span className="mono" style={{ fontSize: '0.85rem', fontWeight: 700, color: '#60a5fa' }}>
+                    {formatBRL(calcularMultaAGRESE({ ufp_quantidade: ufpAgresePrazos, agravantes_ids: [], atenuantes_ids: [], meses_mora: mesesMoraPrazos, valor_ufp: settings.ufp_valor, multiplicador_base: reincidenteEnvio ? 4 : 1 }).valor_com_mora)}
                   </span>
                 </div>
               </div>
@@ -321,7 +479,8 @@ export default function SimuladorCombinacao() {
 
                   const detalhes = [
                     { label: 'Equação D (CI Cl. 11.2)', clause: 'Cl. 11.2 CI', value: resultado.equacao_d },
-                    { label: 'Multa AGRESE (CPA Cl. 22)', clause: 'Cl. 22 CPA', value: resultado.multa_agrese },
+                    { label: 'Multa AGRESE Matriz', clause: 'Lei 6.661/09', value: resultado.multa_agrese_matriz },
+                    { label: 'Multa AGRESE Prazos', clause: 'Res. 01/18', value: resultado.multa_agrese_prazos },
                     { label: 'Multa CI (Cl. 15)', clause: 'Cl. 15 CI', value: resultado.multa_ci },
                   ].filter(d => d.value > 0);
 
@@ -345,7 +504,8 @@ export default function SimuladorCombinacao() {
 
                   const detalhes = [
                     { label: 'Equação D (CI Cl. 11.2)', clause: 'Cl. 11.2 CI', value: resultado.equacao_d },
-                    { label: 'Multa AGRESE (CPA Cl. 22)', clause: 'Cl. 22 CPA', value: resultado.multa_agrese },
+                    { label: 'Multa AGRESE Matriz', clause: 'Lei 6.661/09', value: resultado.multa_agrese_matriz },
+                    { label: 'Multa AGRESE Prazos', clause: 'Res. 01/18', value: resultado.multa_agrese_prazos },
                     { label: 'Multa CI (Cl. 15)', clause: 'Cl. 15 CI', value: resultado.multa_ci },
                   ].filter(d => d.value > 0);
 
@@ -373,7 +533,8 @@ export default function SimuladorCombinacao() {
               <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                 {[
                   { label: 'Equação D (CI Cl. 11.2)', valor: resultado.equacao_d, cor: '#ef4444', pct: resultado.total_impacto ? (resultado.equacao_d / resultado.total_impacto) * 100 : 0, ativo: usarEquacaoD },
-                  { label: 'Multa AGRESE (CPA Cl. 22)', valor: resultado.multa_agrese, cor: '#f97316', pct: resultado.total_impacto ? (resultado.multa_agrese / resultado.total_impacto) * 100 : 0, ativo: usarAGRESE },
+                  { label: 'Multa AGRESE Matriz (Lei 6.661/09)', valor: resultado.multa_agrese_matriz, cor: '#f97316', pct: resultado.total_impacto ? (resultado.multa_agrese_matriz / resultado.total_impacto) * 100 : 0, ativo: usarAgreseMatriz },
+                  { label: 'Multa AGRESE Prazos (Res. 01/18)', valor: resultado.multa_agrese_prazos, cor: '#fb923c', pct: resultado.total_impacto ? (resultado.multa_agrese_prazos / resultado.total_impacto) * 100 : 0, ativo: usarAgresePrazos },
                   { label: 'Multa CI (Cl. 15)', valor: resultado.multa_ci, cor: '#eab308', pct: resultado.total_impacto ? (resultado.multa_ci / resultado.total_impacto) * 100 : 0, ativo: usarCI },
                 ].filter(s => s.ativo && s.valor > 0).map((s) => (
                   <div key={s.label} style={{ background: 'var(--bg-secondary)', borderRadius: 10, padding: '14px', border: '1px solid var(--border-primary)' }}>
@@ -446,7 +607,7 @@ export default function SimuladorCombinacao() {
               Combine múltiplas sanções simultâneas para ver o impacto total. Ative os módulos à esquerda e calcule.
             </p>
             <div style={{ marginTop: 20, display: 'flex', flexDirection: 'column', gap: 6, maxWidth: 320, margin: '20px auto 0' }}>
-              {['Equação D — CI Cláusula 11.2', 'Multa AGRESE — CPA Cláusula 22', 'Penalidade CI — Cláusula 15'].map((item) => (
+              {['Equação D — CI Cláusula 11.2', 'Multa AGRESE Matriz', 'Multa AGRESE Prazos/Omissão', 'Penalidade CI — Cláusula 15'].map((item) => (
                 <div key={item} style={{ fontSize: '0.75rem', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: 8, padding: '6px 10px', borderRadius: 6, background: 'rgba(59,130,246,0.04)', border: '1px solid rgba(59,130,246,0.08)' }}>
                   <span style={{ color: '#60a5fa' }}>+</span> {item}
                 </div>
