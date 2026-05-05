@@ -383,13 +383,13 @@ export default function SimuladorAGRESE() {
                 unit=" R$"
               />
               <ParamInput
-                label="Taxa SELIC Acumulada no Período (%)"
+                label="I - Juros de Mora (Taxa SELIC Acumulada %)"
                 value={selicAcumulada}
                 onChange={setSelicAcumulada}
                 min={0}
                 step={0.1}
                 unit="%"
-                tooltip="Juros de mora calculados pela variação da SELIC"
+                tooltip="Juros de mora contados do mês seguinte ao do vencimento, de acordo com a variação da taxa SELIC."
               />
               <label style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer', padding: '10px', background: pagoNoMesSubsequente ? 'rgba(16,185,129,0.1)' : 'rgba(239,68,68,0.1)', borderRadius: 8 }}>
                 <input 
@@ -399,9 +399,9 @@ export default function SimuladorAGRESE() {
                   onChange={(e) => setPagoNoMesSubsequente(e.target.checked)}
                 />
                 <div>
-                  <div style={{ fontSize: '0.8rem', fontWeight: 600 }}>Pago até último dia útil do mês subsequente?</div>
+                  <div style={{ fontSize: '0.8rem', fontWeight: 600 }}>II - Multa de Mora (Prazo de Pagamento)</div>
                   <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>
-                    Sim = Multa de 2%. Não = Multa de 10%.
+                    Marcado = Pago no mês subsequente (Multa 2%). Desmarcado = Pago posteriormente (Multa 10%).
                   </div>
                 </div>
               </label>
