@@ -40,6 +40,7 @@ export const generatePDFReport = (data: {
   dataOcorrencia?: string;
   descricaoOcorrencia?: string;
   detalhes: Record<string, unknown>[];
+  parametrosTextuais?: { label: string; valor: string }[];
   identificador: string;
   image?: string;
 }) => {
@@ -88,6 +89,34 @@ export const generatePDFReport = (data: {
     const dataFmt = data.dataOcorrencia ? data.dataOcorrencia.split('-').reverse().join('/') : '---';
     doc.text(`Data: ${dataFmt} | Descrição: ${data.descricaoOcorrencia || 'N/A'}`, 20, 81);
     currentY = 95;
+  }
+
+  // Textual Parameters (Justifications, Criteria, etc)
+  if (data.parametrosTextuais && data.parametrosTextuais.length > 0) {
+    let requiredHeight = 10;
+    const splitTexts: any[] = [];
+    data.parametrosTextuais.forEach(param => {
+      const splitLabel = doc.splitTextToSize(`${param.label}: ${param.valor}`, pageWidth - 40);
+      splitTexts.push(splitLabel);
+      requiredHeight += (splitLabel.length * 5);
+    });
+
+    doc.setFillColor(241, 245, 249); // Slate 100
+    doc.rect(15, currentY, pageWidth - 30, requiredHeight, 'F');
+    doc.setTextColor(desoBlue[0], desoBlue[1], desoBlue[2]);
+    doc.setFontSize(9);
+    doc.setFont('helvetica', 'bold');
+    doc.text('PARÂMETROS E JUSTIFICATIVAS ADOTADOS:', 20, currentY + 7);
+    doc.setTextColor(50, 50, 50);
+    doc.setFont('helvetica', 'normal');
+    
+    let paramY = currentY + 13;
+    splitTexts.forEach(splitLabel => {
+      doc.text(splitLabel, 20, paramY);
+      paramY += (splitLabel.length * 5);
+    });
+    
+    currentY += requiredHeight + 5;
   }
 
   // Total Impact Highlight

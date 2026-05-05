@@ -662,11 +662,12 @@ export default function SimuladorAGRESE() {
                     });
                   }
 
+                  const paramsTextuais = [];
                   if (justificativaGravidade) {
-                    detalhes.push({ label: `Dosimetria (Gravidade): ${justificativaGravidade}`, clause: 'Res. 01/2018', value: 0 });
+                    paramsTextuais.push({ label: 'Critério 1 (Gravidade do Descumprimento)', valor: justificativaGravidade });
                   }
                   if (justificativaRelevancia) {
-                    detalhes.push({ label: `Dosimetria (Relevância): ${justificativaRelevancia}`, clause: 'Res. 01/2018', value: 0 });
+                    paramsTextuais.push({ label: 'Critério 2 (Relevância da Informação)', valor: justificativaRelevancia });
                   }
 
                   generatePDFReport({
@@ -676,6 +677,7 @@ export default function SimuladorAGRESE() {
                     dataOcorrencia: dataOcorrencia,
                     descricaoOcorrencia: descricaoOcorrencia,
                     detalhes: detalhes,
+                    parametrosTextuais: paramsTextuais,
                     identificador: `EST-AGRE-${Date.now().toString().slice(-6)}`,
                     image: imageData
                   });
@@ -700,12 +702,7 @@ export default function SimuladorAGRESE() {
                     detalhes.push({ label: 'Mora Acumulada', clause: 'Cl. 22 CPA', value: resultado.valor_com_mora - resultado.valor_final });
                   }
                   
-                  if (justificativaGravidade) {
-                    detalhes.push({ label: `Dosimetria (Gravidade): ${justificativaGravidade}`, clause: 'Res. 01/2018', value: 0 });
-                  }
-                  if (justificativaRelevancia) {
-                    detalhes.push({ label: `Dosimetria (Relevância): ${justificativaRelevancia}`, clause: 'Res. 01/2018', value: 0 });
-                  }
+                  // Dosimetria will not be added to history details as it doesn't represent a financial sum
 
                   addToHistory({
                     source: 'AGRESE',
