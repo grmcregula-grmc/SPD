@@ -6,6 +6,7 @@ const ADMIN_PASSWORD = 'grmc@deS012';
 const LS_COM = 'spd_comunicacao';
 const LS_VOL = 'spd_volumes';
 const LS_ADMIN = 'spd_admin';
+const DATA_VERSION = 'spd_data_v3'; // bump to force reset
 
 function lsGet<T>(key: string, fallback: T): T {
   if (typeof window === 'undefined') return fallback;
@@ -25,8 +26,8 @@ const indicadores = [
 const comunicacaoFallback = [
   { evento: 'Impedimento de cumprimento pontual das obrigações', fund: 'Cláusula 17.2.32 do Contrato de Produção de Água - Prejuízo ou impedimento do cumprimento de obrigações', destino: 'AGRESE, Poder Concedente e Concessionária', prazo: 'Até 1 (um) dia útil após ocorrência', cont: 'Relatório detalhado sobre todo e qualquer evento que possa vir a prejudicar ou impedir o pontual e tempestivo cumprimento das obrigações da DESO, indicando as medidas tomadas ou em curso' },
   { evento: 'Alteração relevante a regular prestação dos Serviços Upstream', fund: 'Cláusula 17.2.33 do Contrato de Produção de Água - Alteração relevante da prestação dos Serviços Upstream', destino: 'AGRESE, Poder Concedente e Concessionária', prazo: 'Até 1 (um) dia útil após ocorrência', cont: 'Relatório detalhado sobre esses fatos, indicando as medidas tomadas ou em curso para superar ou sanar os fatos referidos, incluindo, se for o caso, contribuição de entidades especializadas' },
-  { evento: 'Redução de Volumes Entregues', fund: 'Cláusula 10.12.1 do Contrato de Interdependência - Redução igual ou superior a 10% dos volumes previstos, por período superior a 12 (doze) horas', destino: 'AGRESE e Concessionária', prazo: 'Imediato (após as 12 horas)', cont: 'Relatório detalhado das causas da redução e as ações mitigadoras adotadas' },
-  { evento: 'Paradas Programadas', fund: 'Cláusula 10.13 do Contrato de Interdependência - Paradas programadas que que acarretem mais de 3 horas de interrupção da adução de água tratada até os Pontos De Entrega', destino: 'Concessionária', prazo: 'Antecedência mínima de 2 (dois) dias úteis', cont: 'Relatório com descrição técnica detalhada, que serve como base para a negociação com a Concessionária, visando, sempre que possível, que as manutenções da DESO coincidam com as da Concessionária para reduzir o impacto sistêmico' },
+  { evento: 'Redução de Volumes Entregues', fund: 'Cláusula 10.12.1 do Contrato de Interdependência - Redução igual ou superior a 10% dos volumes previstos, por período superior a 12 (doze) horas', destino: 'AGRESE e Concessionária', prazo: 'Imediato', cont: 'Relatório detalhado das causas da redução e as ações mitigadoras adotadas' },
+  { evento: 'Paradas Programadas', fund: 'Cláusula 10.13 do Contrato de Interdependência - Paradas programadas que acarretem mais de 3 horas de interrupção da adução de água tratada até os Pontos De Entrega. Ofício nº 212/2026-AGRESE (NTR 15/2026)', destino: 'Concessionária / AGRESE', prazo: 'Antecedência mínima de 02 dias úteis para Concessionária. / Antecedência mínima de 24 horas para AGRESE', cont: 'Relatório com descrição técnica detalhada, que serve como base para a negociação com a Concessionária, visando, sempre que possível, que as manutenções da DESO coincidam com as da Concessionária para reduzir o impacto sistêmico' },
   { evento: 'Paradas decorrentes de Obras de Aperfeiçoamento do Sistema Upstream', fund: 'Cláusula 10.8 do Contrato de Produção de Água - Evitar ou minimizar eventuais paralisações do sistema', destino: 'AGRESE, Poder Concedente e Concessionária', prazo: 'Com antecedência', cont: 'Relatório com Plano de Mitigação de Paralisação atrelado aos projetos executivos, elaborado em conjunto pelas Diretorias Técnica e de Produção (DTEC e DPRQ)' },
 ];
 
@@ -190,8 +191,18 @@ export default function TabelasReferencia() {
 
   useEffect(() => {
     setIsAdmin(lsGet<boolean>(LS_ADMIN, false));
-    setComunicacao(lsGet(LS_COM, comunicacaoFallback));
-    setVolumes(lsGet(LS_VOL, volumesFallback));
+    // Version check: reset localStorage if data is outdated
+    const versionOk = lsGet<boolean>(DATA_VERSION, false);
+    if (!versionOk) {
+      lsSet(LS_COM, comunicacaoFallback);
+      lsSet(LS_VOL, volumesFallback);
+      lsSet(DATA_VERSION, true);
+      setComunicacao(comunicacaoFallback);
+      setVolumes(volumesFallback);
+    } else {
+      setComunicacao(lsGet(LS_COM, comunicacaoFallback));
+      setVolumes(lsGet(LS_VOL, volumesFallback));
+    }
   }, []);
 
   const fetchDatabaseData = () => {
