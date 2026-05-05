@@ -3,12 +3,16 @@
 import React, { useState, useCallback } from 'react';
 import {
   calcularMultaAGRESE,
+  calcularTaxaFiscalizacao,
   AGRAVANTES_DISPONIVEIS,
   ATENUANTES_DISPONIVEIS,
   INFRACOES_COMUNS_AGRESE,
+  MATRIZ_INFRACOES,
+  PRAZOS_ENVIO_AGRESE,
   PARAMETROS_DEFAULT,
   formatBRL,
   type ResultadoMultaAGRESE,
+  type ResultadoTaxaFiscalizacao,
 } from '@/lib/calculators';
 import { useSettings } from '@/context/SettingsContext';
 import { StatCard, BreakdownRow, RiskAlert, SectionHeader, ParamInput, ClausulaTag } from '@/components/ui';
@@ -18,16 +22,36 @@ import { HistoryPanel } from '@/components/HistoryPanel';
 
 export default function SimuladorAGRESE() {
   const { settings } = useSettings();
-  const [ufpQuantidade, setUfpQuantidade] = useState(2000);
+  const [categoriaSimulacao, setCategoriaSimulacao] = useState<'matriz' | 'envio' | 'taxa'>('matriz');
+  
+  // States - Comum
   const [valorUfp, setValorUfp] = useState(settings.ufp_valor);
+  const [dataOcorrencia, setDataOcorrencia] = useState(new Date().toISOString().split('T')[0]);
+  const [descricaoOcorrencia, setDescricaoOcorrencia] = useState('');
+  const [justificativaGravidade, setJustificativaGravidade] = useState('');
+  const [justificativaRelevancia, setJustificativaRelevancia] = useState('');
+  
+  // States - Matriz e Envio
+  const [ufpQuantidade, setUfpQuantidade] = useState(100);
   const [agravantesIds, setAgravantesIds] = useState<string[]>([]);
   const [atenantesIds, setAtenuantesIds] = useState<string[]>([]);
   const [mesesMora, setMesesMora] = useState(0);
   const [ipcaAnual, setIpcaAnual] = useState(settings.ipca_anual);
-  const [dataOcorrencia, setDataOcorrencia] = useState(new Date().toISOString().split('T')[0]);
-  const [descricaoOcorrencia, setDescricaoOcorrencia] = useState('');
-  const [tipoOcorrenciaId, setTipoOcorrenciaId] = useState('');
   const [resultado, setResultado] = useState<ResultadoMultaAGRESE | null>(null);
+  
+  // States Específicos - Matriz
+  const [gravidadeId, setGravidadeId] = useState('');
+  
+  // States Específicos - Envio
+  const [prazoId, setPrazoId] = useState('');
+  const [reincidenteEnvio, setReincidenteEnvio] = useState(false);
+  
+  // States Específicos - Taxa de Fiscalização
+  const [valorTaxaOriginal, setValorTaxaOriginal] = useState(1000);
+  const [selicAcumulada, setSelicAcumulada] = useState(0);
+  const [pagoNoMesSubsequente, setPagoNoMesSubsequente] = useState(true);
+  const [resultadoTaxa, setResultadoTaxa] = useState<ResultadoTaxaFiscalizacao | null>(null);
+
   const { addToHistory } = useEstimates();
   const resultRef = React.useRef<HTMLDivElement>(null);
 
@@ -38,16 +62,32 @@ export default function SimuladorAGRESE() {
   }, [settings.ufp_valor, settings.ipca_anual]);
 
   const calcular = useCallback(() => {
-    const res = calcularMultaAGRESE({
-      ufp_quantidade: ufpQuantidade,
-      valor_ufp: valorUfp,
-      agravantes_ids: agravantesIds,
-      atenuantes_ids: atenantesIds,
-      meses_mora: mesesMora,
-      ipca_anual: ipcaAnual,
-    });
-    setResultado(res);
-  }, [ufpQuantidade, valorUfp, agravantesIds, atenantesIds, mesesMora, ipcaAnual]);
+    if (categoriaSimulacao === 'taxa') {
+      const resTaxa = calcularTaxaFiscalizacao({
+        valor_original: valorTaxaOriginal,
+        selic_acumulada: selicAcumulada,
+        pago_mes_subsequente: pagoNoMesSubsequente
+      });
+      setResultadoTaxa(resTaxa);
+      setResultado(null);
+    } else {
+      let ufpFinal = ufpQuantidade;
+      if (categoriaSimulacao === 'envio' && reincidenteEnvio) {
+        ufpFinal = ufpQuantidade * 4; // quadruplica
+      }
+
+      const res = calcularMultaAGRESE({
+        ufp_quantidade: ufpFinal,
+        valor_ufp: valorUfp,
+        agravantes_ids: agravantesIds,
+        atenuantes_ids: atenantesIds,
+        meses_mora: mesesMora,
+        ipca_anual: ipcaAnual,
+      });
+      setResultado(res);
+      setResultadoTaxa(null);
+    }
+  }, [categoriaSimulacao, valorTaxaOriginal, selicAcumulada, pagoNoMesSubsequente, ufpQuantidade, reincidenteEnvio, valorUfp, agravantesIds, atenantesIds, mesesMora, ipcaAnual]);
 
   const toggleAgravante = (id: string) => {
     setAgravantesIds((prev) => prev.includes(id) ? prev.filter((x) => x !== id) : [...prev, id]);
@@ -78,69 +118,236 @@ export default function SimuladorAGRESE() {
       {/* ===== PAINEL ESQUERDO — INPUTS ===== */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
 
-        {/* Seletor de Infração Baseado em Regras */}
-        <div className="glass-card" style={{ padding: 20, border: '1px solid rgba(59,130,246,0.25)' }}>
-          <SectionHeader
-            title="Seleção por Conduta / Regra"
-            subtitle="Estime com base na infração contratual descumprida"
-            icon="⚖️"
-            badge="Smart Estimate"
-            badgeColor="#3b82f6"
-          />
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-            <label className="spd-label">Tipo de Ocorrência</label>
-            <select 
-              className="spd-input" 
-              style={{ width: '100%', cursor: 'pointer' }}
-              value={tipoOcorrenciaId}
-              onChange={(e) => {
-                const inf = INFRACOES_COMUNS_AGRESE.find(i => i.id === e.target.value);
-                setTipoOcorrenciaId(e.target.value);
-                if (inf) {
-                  setUfpQuantidade(inf.ufp_sugerida);
-                  setDescricaoOcorrencia(inf.nome);
-                } else if (e.target.value === 'outros') {
-                  setUfpQuantidade(100);
-                  setDescricaoOcorrencia('Outra ocorrência não listada');
-                }
+        {/* Seletor de Categoria */}
+        <div style={{ display: 'flex', gap: 10, background: 'rgba(0,0,0,0.1)', padding: 6, borderRadius: 12 }}>
+          {[
+            { id: 'matriz', label: 'Matriz de Infrações' },
+            { id: 'envio', label: 'Prazos / Omissão' },
+            { id: 'taxa', label: 'Taxa Fiscalização' }
+          ].map(c => (
+            <button
+              key={c.id}
+              onClick={() => {
+                setCategoriaSimulacao(c.id as any);
+                setResultado(null);
+                setResultadoTaxa(null);
               }}
+              className={categoriaSimulacao === c.id ? 'btn-primary' : 'btn-ghost'}
+              style={{ flex: 1, padding: '8px', fontSize: '0.8rem' }}
             >
-              <option value="">Selecione uma regra descumprida...</option>
-              {INFRACOES_COMUNS_AGRESE.map(inf => (
-                <option key={inf.id} value={inf.id}>
-                  {inf.nome} ({inf.clausula})
-                </option>
-              ))}
-              <option value="outros">Outros (Personalizado)</option>
-            </select>
+              {c.label}
+            </button>
+          ))}
+        </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
-              <div>
-                <label className="spd-label">Data da Ocorrência</label>
-                <input 
-                  type="date" 
-                  className="spd-input" 
-                  value={dataOcorrencia}
-                  onChange={(e) => setDataOcorrencia(e.target.value)}
-                />
-              </div>
-              <div>
-                <label className="spd-label">Descrição da Ocorrência</label>
-                <input 
-                  className="spd-input" 
-                  placeholder="Ex: Rompimento de adutora..."
-                  value={descricaoOcorrencia}
-                  onChange={(e) => setDescricaoOcorrencia(e.target.value)}
-                />
-              </div>
+        {/* Inputs de Ocorrência (Comum) */}
+        <div className="glass-card" style={{ padding: 20 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+            <div>
+              <label className="spd-label">Data da Ocorrência</label>
+              <input 
+                type="date" 
+                className="spd-input" 
+                value={dataOcorrencia}
+                onChange={(e) => setDataOcorrencia(e.target.value)}
+              />
             </div>
-            <div style={{ marginTop: 8, padding: '10px 12px', background: 'rgba(59,130,246,0.05)', borderRadius: 8, border: '1px solid rgba(59,130,246,0.1)' }}>
-              <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', lineHeight: 1.5 }}>
-                Ao selecionar uma regra, o sistema preencherá automaticamente a <b>Quantidade de UFP/SE</b> sugerida conforme a gravidade da conduta prevista nos contratos e resoluções.
-              </div>
+            <div>
+              <label className="spd-label">Descrição da Ocorrência</label>
+              <input 
+                className="spd-input" 
+                placeholder="Ex: Rompimento de adutora..."
+                value={descricaoOcorrencia}
+                onChange={(e) => setDescricaoOcorrencia(e.target.value)}
+              />
             </div>
           </div>
         </div>
+
+        {categoriaSimulacao === 'matriz' && (
+          <div className="glass-card" style={{ padding: 20, border: '1px solid rgba(59,130,246,0.25)' }}>
+            <SectionHeader
+              title="Matriz de Infrações (Lei Nº 6.661/2009)"
+              subtitle="Selecione a gravidade da infração."
+              icon="⚖️"
+              badge="Art. 24-A"
+              badgeColor="#3b82f6"
+            />
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              <label className="spd-label">Classificação da Gravidade</label>
+              <select 
+                className="spd-input" 
+                style={{ width: '100%', cursor: 'pointer' }}
+                value={gravidadeId}
+                onChange={(e) => {
+                  const matriz = MATRIZ_INFRACOES.find(m => m.id === e.target.value);
+                  setGravidadeId(e.target.value);
+                  if (matriz) {
+                    setUfpQuantidade(matriz.ufp);
+                    setDescricaoOcorrencia(matriz.desc);
+                  }
+                }}
+              >
+                <option value="">Selecione uma gravidade...</option>
+                {MATRIZ_INFRACOES.map(m => (
+                  <option key={m.id} value={m.id}>
+                    {m.nome} — {m.ufp} UFPs
+                  </option>
+                ))}
+              </select>
+              {gravidadeId && (
+                <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', background: 'rgba(59,130,246,0.05)', padding: '10px', borderRadius: 8 }}>
+                  <b>Base Legal:</b> {MATRIZ_INFRACOES.find(m => m.id === gravidadeId)?.fundamentacao}
+                </div>
+              )}
+              <ParamInput
+                label="Quantidade de UFP/SE"
+                value={ufpQuantidade}
+                onChange={setUfpQuantidade}
+                min={100}
+                max={10000}
+                step={100}
+                tooltip="Piso: 100 UFP/SE | Teto: 10.000 UFP/SE (Cl. 22.1.2 CPA)"
+              />
+              <div style={{ marginTop: 10 }}>
+                <label className="spd-label">Critério 1: Gravidade do Descumprimento (Justificativa)</label>
+                <input 
+                  className="spd-input" 
+                  placeholder="Justifique o impacto..."
+                  value={justificativaGravidade}
+                  onChange={(e) => setJustificativaGravidade(e.target.value)}
+                  style={{ width: '100%' }}
+                />
+              </div>
+            </div>
+          </div>
+        )}
+
+        {categoriaSimulacao === 'envio' && (
+          <div className="glass-card" style={{ padding: 20, border: '1px solid rgba(59,130,246,0.25)' }}>
+            <SectionHeader
+              title="Prazos e Envio de Informações"
+              subtitle="Resolução Nº 01/2018 AGRESE"
+              icon="📄"
+              badge="Art. 4º e 5º"
+              badgeColor="#3b82f6"
+            />
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              <label className="spd-label">Prazo Descumprido</label>
+              <select 
+                className="spd-input" 
+                style={{ width: '100%', cursor: 'pointer' }}
+                value={prazoId}
+                onChange={(e) => {
+                  const prazo = PRAZOS_ENVIO_AGRESE.find(p => p.id === e.target.value);
+                  setPrazoId(e.target.value);
+                  if (prazo) {
+                    setDescricaoOcorrencia(`Atraso: ${prazo.nome}`);
+                    setUfpQuantidade(100); // base default
+                  }
+                }}
+              >
+                <option value="">Selecione o tipo de envio...</option>
+                {PRAZOS_ENVIO_AGRESE.map(p => (
+                  <option key={p.id} value={p.id}>
+                    {p.nome} ({p.prazo})
+                  </option>
+                ))}
+              </select>
+              
+              <ParamInput
+                label="UFP/SE Base (por doc/informação)"
+                value={ufpQuantidade}
+                onChange={setUfpQuantidade}
+                min={100}
+                max={10000}
+                step={100}
+                tooltip="Omissão: 100 a 500. Falsidade: 100 a 10.000"
+              />
+
+              <label style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 10, cursor: 'pointer', padding: '10px', background: reincidenteEnvio ? 'rgba(239,68,68,0.1)' : 'rgba(255,255,255,0.05)', borderRadius: 8 }}>
+                <input 
+                  type="checkbox" 
+                  className="spd-checkbox"
+                  checked={reincidenteEnvio}
+                  onChange={(e) => setReincidenteEnvio(e.target.checked)}
+                />
+                <div>
+                  <div style={{ fontSize: '0.8rem', fontWeight: 600 }}>Reincidência (Art. 6º, caput)</div>
+                  <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>Quadruplica e cumula o valor da multa base.</div>
+                </div>
+              </label>
+
+              <div style={{ marginTop: 10, display: 'flex', flexDirection: 'column', gap: 10 }}>
+                <div>
+                  <label className="spd-label">Critério 1: Gravidade do Descumprimento</label>
+                  <input 
+                    className="spd-input" 
+                    placeholder="Impacto regulatório..."
+                    value={justificativaGravidade}
+                    onChange={(e) => setJustificativaGravidade(e.target.value)}
+                    style={{ width: '100%' }}
+                  />
+                </div>
+                <div>
+                  <label className="spd-label">Critério 2: Relevância da Informação</label>
+                  <input 
+                    className="spd-input" 
+                    placeholder="Qual a relevância do dado omitido?"
+                    value={justificativaRelevancia}
+                    onChange={(e) => setJustificativaRelevancia(e.target.value)}
+                    style={{ width: '100%' }}
+                  />
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
+
+        {categoriaSimulacao === 'taxa' && (
+          <div className="glass-card" style={{ padding: 20, border: '1px solid rgba(59,130,246,0.25)' }}>
+            <SectionHeader
+              title="Atraso na Taxa de Fiscalização"
+              subtitle="Lei Nº 6.661/2009, Art. 24, § 4º"
+              icon="💰"
+              badge="Art. 24"
+              badgeColor="#3b82f6"
+            />
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+              <ParamInput
+                label="Valor Original da Taxa"
+                value={valorTaxaOriginal}
+                onChange={setValorTaxaOriginal}
+                min={1}
+                step={100}
+                unit=" R$"
+              />
+              <ParamInput
+                label="Taxa SELIC Acumulada no Período (%)"
+                value={selicAcumulada}
+                onChange={setSelicAcumulada}
+                min={0}
+                step={0.1}
+                unit="%"
+                tooltip="Juros de mora calculados pela variação da SELIC"
+              />
+              <label style={{ display: 'flex', alignItems: 'center', gap: 10, cursor: 'pointer', padding: '10px', background: pagoNoMesSubsequente ? 'rgba(16,185,129,0.1)' : 'rgba(239,68,68,0.1)', borderRadius: 8 }}>
+                <input 
+                  type="checkbox" 
+                  className="spd-checkbox"
+                  checked={pagoNoMesSubsequente}
+                  onChange={(e) => setPagoNoMesSubsequente(e.target.checked)}
+                />
+                <div>
+                  <div style={{ fontSize: '0.8rem', fontWeight: 600 }}>Pago até último dia útil do mês subsequente?</div>
+                  <div style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>
+                    Sim = Multa de 2%. Não = Multa de 10%.
+                  </div>
+                </div>
+              </label>
+            </div>
+          </div>
+        )}
 
         {/* Presets rápidos */}
         <div className="glass-card" style={{ padding: 20 }}>
@@ -341,7 +548,88 @@ export default function SimuladorAGRESE() {
 
       {/* ===== PAINEL DIREITO — RESULTADO ===== */}
       <div ref={resultRef} style={{ display: 'flex', flexDirection: 'column', gap: 20 }}>
-        {resultado ? (
+        {resultadoTaxa ? (
+          <div className="animate-fade-in" style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
+            <div style={{ display: 'flex', gap: 10 }}>
+              <button 
+                className="btn-primary" 
+                onClick={async () => {
+                  if (!resultadoTaxa) return;
+                  const imageData = await captureElement(resultRef.current);
+                  generatePDFReport({
+                    titulo: 'Relatório de Estimativa de Penalidade',
+                    subtitulo: `Taxa de Fiscalização AGRESE (Lei 6.661/2009)`,
+                    total: resultadoTaxa.valor_total,
+                    dataOcorrencia: dataOcorrencia,
+                    descricaoOcorrencia: descricaoOcorrencia || 'Atraso no pagamento da Taxa de Fiscalização',
+                    detalhes: resultadoTaxa.breakdown.map(b => ({ label: b.descricao, clause: 'Art. 24, § 4º', value: b.valor })),
+                    identificador: `EST-TAXA-${Date.now().toString().slice(-6)}`,
+                    image: imageData
+                  });
+                }}
+                style={{ flex: 1, padding: '12px', fontSize: '0.8rem', fontWeight: 700, gap: 8, display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+              >
+                📄 EXPORTAR PDF
+              </button>
+              <button 
+                onClick={async () => {
+                  if (!resultadoTaxa) return;
+                  const imageData = await captureElement(resultRef.current);
+                  addToHistory({
+                    source: 'AGRESE',
+                    contract: 'Lei 6.661/2009',
+                    titulo: descricaoOcorrencia || 'Atraso na Taxa de Fiscalização',
+                    descricao: `Data: ${dataOcorrencia.split('-').reverse().join('/')}. Simulação de mora e juros sobre Taxa de Fiscalização.`,
+                    valor: resultadoTaxa.valor_total,
+                    detalhes: resultadoTaxa.breakdown.map(b => ({ label: b.descricao, clause: 'Art. 24, § 4º', value: b.valor })),
+                    image: imageData
+                  });
+                  alert('Estimativa salva no histórico da aba!');
+                }}
+                className="btn-success"
+                style={{ flex: 1, padding: '12px', fontSize: '0.8rem', fontWeight: 700, gap: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#10b981', border: 'none', color: 'white' }}
+              >
+                💾 SALVAR ESTIMATIVA
+              </button>
+            </div>
+
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
+              <StatCard
+                label="Valor Original"
+                value={resultadoTaxa.valor_original}
+                isCurrency
+                icon="📊"
+              />
+              <StatCard
+                label="Total Devido"
+                value={resultadoTaxa.valor_total}
+                isCurrency
+                icon="⚖️"
+                variant="danger"
+              />
+            </div>
+
+            <div className="glass-card" style={{ padding: 20 }}>
+              <SectionHeader title="Breakdown Detalhado" subtitle="Composição da penalidade por atraso" icon="🔍" />
+              <div>
+                {resultadoTaxa.breakdown.map((item, idx) => (
+                  <BreakdownRow key={idx} {...item} />
+                ))}
+              </div>
+            </div>
+
+            <RiskAlert value={resultadoTaxa.valor_total} />
+
+            <div className="glass-card" style={{ padding: 16, background: 'rgba(139,92,246,0.04)', border: '1px solid rgba(139,92,246,0.15)' }}>
+              <div style={{ fontSize: '0.7rem', fontWeight: 700, color: '#a78bfa', marginBottom: 8, textTransform: 'uppercase', letterSpacing: '0.08em' }}>
+                📚 Fundamentação Legal
+              </div>
+              <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', lineHeight: 1.6 }}>
+                Art. 24, § 4º da Lei Estadual Nº 6.661/2009. Atraso sujeita o prestador a juros de mora (SELIC acumulada) e multa de mora (2% se pago no mês seguinte, ou 10% posteriormente).
+              </div>
+            </div>
+          </div>
+        ) : resultado ? (
           <div className="animate-fade-in" style={{ display: 'flex', flexDirection: 'column', gap: 16 }}>
 
             {/* KPIs principais */}
@@ -374,6 +662,13 @@ export default function SimuladorAGRESE() {
                     });
                   }
 
+                  if (justificativaGravidade) {
+                    detalhes.push({ label: `Dosimetria (Gravidade): ${justificativaGravidade}`, clause: 'Res. 01/2018', value: 0 });
+                  }
+                  if (justificativaRelevancia) {
+                    detalhes.push({ label: `Dosimetria (Relevância): ${justificativaRelevancia}`, clause: 'Res. 01/2018', value: 0 });
+                  }
+
                   generatePDFReport({
                     titulo: 'Relatório de Estimativa de Penalidade',
                     subtitulo: `CPA — Regime Sancionatório AGRESE. Valor da UFP/SE: R$ ${resultado.valor_ufp.toFixed(2)}`,
@@ -403,6 +698,13 @@ export default function SimuladorAGRESE() {
                   ];
                   if (resultado.meses_mora > 0) {
                     detalhes.push({ label: 'Mora Acumulada', clause: 'Cl. 22 CPA', value: resultado.valor_com_mora - resultado.valor_final });
+                  }
+                  
+                  if (justificativaGravidade) {
+                    detalhes.push({ label: `Dosimetria (Gravidade): ${justificativaGravidade}`, clause: 'Res. 01/2018', value: 0 });
+                  }
+                  if (justificativaRelevancia) {
+                    detalhes.push({ label: `Dosimetria (Relevância): ${justificativaRelevancia}`, clause: 'Res. 01/2018', value: 0 });
                   }
 
                   addToHistory({

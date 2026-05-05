@@ -7,7 +7,7 @@ export type ClassificacaoEstimate = 'De Fato' | 'Potencial Alta' | 'Potencial Mo
 export interface SavedEstimate {
   id: string;
   source: 'AGRESE' | 'EQUACAO_D' | 'COMBINACAO_PENALIDADES' | 'MANUAL';
-  contract?: 'CPA' | 'CI';
+  contract?: 'CPA' | 'CI' | 'Lei 6.661/2009';
   titulo: string;
   descricao: string;
   valor: number;

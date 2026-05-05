@@ -142,6 +142,49 @@ export interface InfracaoAgrese {
   desc: string;
 }
 
+export const MATRIZ_INFRACOES = [
+  { 
+    id: 'leve', 
+    nome: 'Infração Leve', 
+    ufp: 100, 
+    fundamentacao: 'Art. 24-A, § 2º, I; e § 3º, I e II', 
+    desc: 'Não fornecer, no prazo fixado, documento e/ou dado solicitado pela AGRESE (por documento).',
+    baseLegal: 'Lei Nº 6.661/2009'
+  },
+  { 
+    id: 'media', 
+    nome: 'Infração Média', 
+    ufp: 1000, 
+    fundamentacao: 'Art. 24-A, § 2º, II; e § 4º, I a V', 
+    desc: 'Reincidência leve, sonegação de informações, descumprimento de prazos/determinações, falhas na prestação do serviço.',
+    baseLegal: 'Lei Nº 6.661/2009'
+  },
+  { 
+    id: 'grave', 
+    nome: 'Infração Grave', 
+    ufp: 5000, 
+    fundamentacao: 'Art. 24-A, § 2º, III; e § 5º, I a VI', 
+    desc: 'Reincidência média, documentos adulterados, obstrução de fiscalização, descumprimento de legislação/contrato, grave violação de padrões.',
+    baseLegal: 'Lei Nº 6.661/2009'
+  },
+  { 
+    id: 'gravissima', 
+    nome: 'Infração Gravíssima', 
+    ufp: 10000, 
+    fundamentacao: 'Art. 24-A, § 2º, IV; e § 6º, I e II', 
+    desc: 'Reincidência grave e outras hipóteses extremas previstas em ato regulamentar.',
+    baseLegal: 'Lei Nº 6.661/2009'
+  }
+];
+
+export const PRAZOS_ENVIO_AGRESE = [
+  { id: 'periodicas', nome: 'Informações Periódicas', prazo: 'Até o 10º dia do mês subsequente', base: 'Art. 4º, § 2º' },
+  { id: 'esclarecimentos', nome: 'Esclarecimentos sobre Dados', prazo: 'Até 5 dias corridos', base: 'Art. 5º, inciso I' },
+  { id: 'eventuais', nome: 'Informações Eventuais', prazo: 'Até 10 dias corridos', base: 'Art. 5º, inciso II' },
+  { id: 'manutencao', nome: 'Manutenção Programada', prazo: 'Com antecedência de 24 horas', base: 'Ofício nº 212/2026 - NTR 15/2026' },
+  { id: 'interrupcao', nome: 'Interrupção Involuntária', prazo: 'Comunicada imediatamente', base: 'Art. 8º, inciso II' },
+];
+
 export const INFRACOES_COMUNS_AGRESE: InfracaoAgrese[] = [
   {
     id: 'atraso_contas',
@@ -310,6 +353,51 @@ export function calcularMultaAGRESE(params: {
     valor_com_mora,
     economia_pagamento_antecipado,
     breakdown,
+  };
+}
+
+// =============================================
+// ENGINE - TAXA DE FISCALIZAÇÃO (Lei 6.661/2009)
+// =============================================
+
+export interface ResultadoTaxaFiscalizacao {
+  valor_original: number;
+  selic_acumulada: number;
+  juros_valor: number;
+  multa_percentual: number;
+  multa_valor: number;
+  valor_total: number;
+  breakdown: BreakdownItem[];
+}
+
+export function calcularTaxaFiscalizacao(params: {
+  valor_original: number;
+  selic_acumulada: number;
+  pago_mes_subsequente: boolean;
+}): ResultadoTaxaFiscalizacao {
+  const { valor_original, selic_acumulada, pago_mes_subsequente } = params;
+  
+  const juros_valor = valor_original * (selic_acumulada / 100);
+  const multa_percentual = pago_mes_subsequente ? 2 : 10;
+  const multa_valor = valor_original * (multa_percentual / 100);
+  
+  const valor_total = valor_original + juros_valor + multa_valor;
+  
+  const breakdown: BreakdownItem[] = [
+    { descricao: 'Valor Original da Taxa', valor: valor_original, tipo: 'base' },
+    { descricao: `Juros SELIC Acumulados (${selic_acumulada.toFixed(2)}%)`, valor: juros_valor, tipo: 'mora', percentual: selic_acumulada },
+    { descricao: `Multa de Mora (${multa_percentual}%) - Art. 24, § 4º, II`, valor: multa_valor, tipo: 'agravante', percentual: multa_percentual },
+    { descricao: 'Valor Total Devido', valor: valor_total, tipo: 'final' }
+  ];
+
+  return {
+    valor_original,
+    selic_acumulada,
+    juros_valor,
+    multa_percentual,
+    multa_valor,
+    valor_total,
+    breakdown
   };
 }
 
