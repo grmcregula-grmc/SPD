@@ -4,11 +4,14 @@ import React, { useState, useCallback } from 'react';
 import {
   calcularMultaAGRESE,
   calcularTaxaFiscalizacao,
+  calcularUfpEnvioInformacoes,
   AGRAVANTES_DISPONIVEIS,
   ATENUANTES_DISPONIVEIS,
   INFRACOES_COMUNS_AGRESE,
   MATRIZ_INFRACOES,
   PRAZOS_ENVIO_AGRESE,
+  ENVIO_INFORMACOES,
+  CRITERIOS_DOSIMETRIA,
   PARAMETROS_DEFAULT,
   formatBRL,
   type ResultadoMultaAGRESE,
@@ -44,6 +47,9 @@ export default function SimuladorAGRESE() {
   
   // States Específicos - Envio
   const [prazoId, setPrazoId] = useState('');
+  const [tipoEnvio, setTipoEnvio] = useState('');
+  const [nivelGravidade, setNivelGravidade] = useState('');
+  const [nivelRelevancia, setNivelRelevancia] = useState('');
   const [reincidenteEnvio, setReincidenteEnvio] = useState(false);
   
   // States Específicos - Taxa de Fiscalização
@@ -61,6 +67,13 @@ export default function SimuladorAGRESE() {
     setIpcaAnual(settings.ipca_anual);
   }, [settings.ufp_valor, settings.ipca_anual]);
 
+  React.useEffect(() => {
+    if (categoriaSimulacao === 'envio' && tipoEnvio) {
+      const ufp = calcularUfpEnvioInformacoes(tipoEnvio, nivelGravidade, nivelRelevancia);
+      setUfpQuantidade(ufp);
+    }
+  }, [tipoEnvio, nivelGravidade, nivelRelevancia, categoriaSimulacao]);
+
   const calcular = useCallback(() => {
     if (categoriaSimulacao === 'taxa') {
       const resTaxa = calcularTaxaFiscalizacao({
@@ -71,18 +84,19 @@ export default function SimuladorAGRESE() {
       setResultadoTaxa(resTaxa);
       setResultado(null);
     } else {
-      let ufpFinal = ufpQuantidade;
+      let multiplicador = 1;
       if (categoriaSimulacao === 'envio' && reincidenteEnvio) {
-        ufpFinal = ufpQuantidade * 4; // quadruplica
+        multiplicador = 4; // quadruplica
       }
 
       const res = calcularMultaAGRESE({
-        ufp_quantidade: ufpFinal,
+        ufp_quantidade: ufpQuantidade,
         valor_ufp: valorUfp,
         agravantes_ids: agravantesIds,
         atenuantes_ids: atenantesIds,
         meses_mora: mesesMora,
         ipca_anual: ipcaAnual,
+        multiplicador_base: multiplicador,
       });
       setResultado(res);
       setResultadoTaxa(null);
@@ -255,14 +269,29 @@ export default function SimuladorAGRESE() {
                 ))}
               </select>
               
+              <label className="spd-label">Tipo de Conduta</label>
+              <select 
+                className="spd-input" 
+                style={{ width: '100%', cursor: 'pointer' }}
+                value={tipoEnvio}
+                onChange={(e) => setTipoEnvio(e.target.value)}
+              >
+                <option value="">Selecione o tipo de conduta...</option>
+                {ENVIO_INFORMACOES.map(e => (
+                  <option key={e.id} value={e.id}>
+                    {e.nome} (Base: {e.min_ufp} a {e.max_ufp} UFPs)
+                  </option>
+                ))}
+              </select>
+
               <ParamInput
-                label="UFP/SE Base (por doc/informação)"
+                label="UFP/SE Base Calculada (Dosimetria)"
                 value={ufpQuantidade}
                 onChange={setUfpQuantidade}
                 min={100}
                 max={10000}
-                step={100}
-                tooltip="Omissão: 100 a 500. Falsidade: 100 a 10.000"
+                step={1}
+                tooltip="Calculada com base na gravidade e relevância."
               />
 
               <label style={{ display: 'flex', alignItems: 'center', gap: 10, marginTop: 10, cursor: 'pointer', padding: '10px', background: reincidenteEnvio ? 'rgba(239,68,68,0.1)' : 'rgba(255,255,255,0.05)', borderRadius: 8 }}>
@@ -281,9 +310,20 @@ export default function SimuladorAGRESE() {
               <div style={{ marginTop: 10, display: 'flex', flexDirection: 'column', gap: 10 }}>
                 <div>
                   <label className="spd-label">Critério 1: Gravidade do Descumprimento</label>
+                  <select 
+                    className="spd-input" 
+                    value={nivelGravidade}
+                    onChange={(e) => setNivelGravidade(e.target.value)}
+                    style={{ width: '100%', marginBottom: 8 }}
+                  >
+                    <option value="">Selecione o nível...</option>
+                    {CRITERIOS_DOSIMETRIA.map(c => (
+                      <option key={c.id} value={c.id}>{c.nome}</option>
+                    ))}
+                  </select>
                   <input 
                     className="spd-input" 
-                    placeholder="Impacto regulatório..."
+                    placeholder="Justifique o impacto regulatório..."
                     value={justificativaGravidade}
                     onChange={(e) => setJustificativaGravidade(e.target.value)}
                     style={{ width: '100%' }}
@@ -291,6 +331,17 @@ export default function SimuladorAGRESE() {
                 </div>
                 <div>
                   <label className="spd-label">Critério 2: Relevância da Informação</label>
+                  <select 
+                    className="spd-input" 
+                    value={nivelRelevancia}
+                    onChange={(e) => setNivelRelevancia(e.target.value)}
+                    style={{ width: '100%', marginBottom: 8 }}
+                  >
+                    <option value="">Selecione o nível...</option>
+                    {CRITERIOS_DOSIMETRIA.map(c => (
+                      <option key={c.id} value={c.id}>{c.nome}</option>
+                    ))}
+                  </select>
                   <input 
                     className="spd-input" 
                     placeholder="Qual a relevância do dado omitido?"
@@ -641,8 +692,19 @@ export default function SimuladorAGRESE() {
 
                   const imageData = await captureElement(resultRef.current);
 
+                  let fundamentacaoBase = 'CPA Cl. 22.1.2';
+                  let multiplicadorStr = '';
+                  if (categoriaSimulacao === 'matriz') {
+                    const matriz = MATRIZ_INFRACOES.find(m => m.id === gravidadeId);
+                    if (matriz) fundamentacaoBase = matriz.fundamentacao;
+                  } else if (categoriaSimulacao === 'envio') {
+                    const conduta = ENVIO_INFORMACOES.find(e => e.id === tipoEnvio);
+                    if (conduta) fundamentacaoBase = conduta.fundamentacao;
+                    if (reincidenteEnvio) multiplicadorStr = ' (x4 Reincidência)';
+                  }
+
                   const detalhes = [
-                    { label: `Multa Base (${resultado.ufp_quantidade} UFP/SE)`, clause: 'CPA Cl. 22.1.2', value: resultado.valor_base },
+                    { label: `Multa Base (${resultado.ufp_quantidade} UFP/SE)${multiplicadorStr}`, clause: fundamentacaoBase, value: resultado.valor_base },
                     ...resultado.agravantes.map(a => ({ label: `Agravante: ${a.nome}`, clause: a.clausula, value: resultado.valor_base * (a.percentual / 100) })),
                   ];
 
@@ -663,11 +725,26 @@ export default function SimuladorAGRESE() {
                   }
 
                   const paramsTextuais = [];
-                  if (justificativaGravidade) {
-                    paramsTextuais.push({ label: 'Critério 1 (Gravidade do Descumprimento)', valor: justificativaGravidade });
+                  if (categoriaSimulacao === 'matriz') {
+                     const matriz = MATRIZ_INFRACOES.find(m => m.id === gravidadeId);
+                     if (matriz) {
+                       paramsTextuais.push({ label: 'Enquadramento (Lei 6.661/09)', valor: `${matriz.nome} (${matriz.ufp} UFPs) - ${matriz.fundamentacao}` });
+                     }
+                  } else if (categoriaSimulacao === 'envio') {
+                     const conduta = ENVIO_INFORMACOES.find(e => e.id === tipoEnvio);
+                     if (conduta) {
+                       paramsTextuais.push({ label: 'Conduta (Res. 01/18)', valor: `${conduta.nome} (Base de ${conduta.min_ufp} a ${conduta.max_ufp} UFPs) - ${conduta.fundamentacao}` });
+                       const grav = CRITERIOS_DOSIMETRIA.find(c => c.id === nivelGravidade)?.nome || 'Não definido';
+                       const rel = CRITERIOS_DOSIMETRIA.find(c => c.id === nivelRelevancia)?.nome || 'Não definido';
+                       paramsTextuais.push({ label: 'Dosimetria (Art. 6º, § 1º)', valor: `Gravidade: ${grav} | Relevância: ${rel}` });
+                     }
                   }
-                  if (justificativaRelevancia) {
-                    paramsTextuais.push({ label: 'Critério 2 (Relevância da Informação)', valor: justificativaRelevancia });
+                  
+                  if (justificativaGravidade) {
+                    paramsTextuais.push({ label: 'Justificativa do Impacto', valor: justificativaGravidade });
+                  }
+                  if (justificativaRelevancia && categoriaSimulacao === 'envio') {
+                    paramsTextuais.push({ label: 'Justificativa da Relevância', valor: justificativaRelevancia });
                   }
 
                   generatePDFReport({
@@ -692,9 +769,20 @@ export default function SimuladorAGRESE() {
 
                   const imageData = await captureElement(resultRef.current);
 
+                  let fundamentacaoBase = 'CPA Cl. 22.1.2';
+                  let multiplicadorStr = '';
+                  if (categoriaSimulacao === 'matriz') {
+                    const matriz = MATRIZ_INFRACOES.find(m => m.id === gravidadeId);
+                    if (matriz) fundamentacaoBase = matriz.fundamentacao;
+                  } else if (categoriaSimulacao === 'envio') {
+                    const conduta = ENVIO_INFORMACOES.find(e => e.id === tipoEnvio);
+                    if (conduta) fundamentacaoBase = conduta.fundamentacao;
+                    if (reincidenteEnvio) multiplicadorStr = ' (x4 Reincidência)';
+                  }
+
                   const item = INFRACOES_COMUNS_AGRESE.find(i => i.ufp_sugerida === ufpQuantidade);
                   const detalhes = [
-                    { label: `Multa Base (${resultado.ufp_quantidade} UFP/SE)`, clause: 'CPA Cl. 22.1.2', value: resultado.valor_base },
+                    { label: `Multa Base (${resultado.ufp_quantidade} UFP/SE)${multiplicadorStr}`, clause: fundamentacaoBase, value: resultado.valor_base },
                     ...resultado.agravantes.map(a => ({ label: `Agravante: ${a.nome}`, clause: a.clausula, value: resultado.valor_base * (a.percentual / 100) })),
                     ...resultado.atenuantes.map(a => ({ label: `Atenuante: ${a.nome}`, clause: a.clausula, value: -(resultado.valor_majorado * (a.percentual / 100)) }))
                   ];

@@ -148,7 +148,7 @@ export const MATRIZ_INFRACOES = [
     nome: 'Infração Leve', 
     ufp: 100, 
     fundamentacao: 'Art. 24-A, § 2º, I; e § 3º, I e II', 
-    desc: 'Não fornecer, no prazo fixado, documento e/ou dado solicitado pela AGRESE (por documento).',
+    desc: 'Não fornecer, no prazo fixado, documento e/ou dado solicitado pela AGRESE (a multa é aplicada por cada documento ou dado não fornecido). Outras hipóteses que venham a ser previstas em atos regulamentares da AGRESE.',
     baseLegal: 'Lei Nº 6.661/2009'
   },
   { 
@@ -156,7 +156,7 @@ export const MATRIZ_INFRACOES = [
     nome: 'Infração Média', 
     ufp: 1000, 
     fundamentacao: 'Art. 24-A, § 2º, II; e § 4º, I a V', 
-    desc: 'Reincidência leve, sonegação de informações, descumprimento de prazos/determinações, falhas na prestação do serviço.',
+    desc: 'Reincidência em infrações leves anteriores. Sonegação de informações solicitadas pela agência reguladora. Descumprimento, no prazo fixado, de determinações feitas pela AGRESE. Falha na prestação do serviço concedido, permitido ou autorizado. Outras hipóteses previstas em ato regulamentar.',
     baseLegal: 'Lei Nº 6.661/2009'
   },
   { 
@@ -164,7 +164,7 @@ export const MATRIZ_INFRACOES = [
     nome: 'Infração Grave', 
     ufp: 5000, 
     fundamentacao: 'Art. 24-A, § 2º, III; e § 5º, I a VI', 
-    desc: 'Reincidência média, documentos adulterados, obstrução de fiscalização, descumprimento de legislação/contrato, grave violação de padrões.',
+    desc: 'Reincidência nas infrações médias (sonegação, descumprimento de prazos, falhas no serviço, etc.). Fornecimento de informações e documentos adulterados. Obstrução da fiscalização realizada pela AGRESE. Descumprimento da legislação, dos atos regulamentares da AGRESE ou do próprio contrato. Grave violação dos padrões de qualidade dos serviços. Outras hipóteses previstas em ato regulamentar.',
     baseLegal: 'Lei Nº 6.661/2009'
   },
   { 
@@ -172,10 +172,33 @@ export const MATRIZ_INFRACOES = [
     nome: 'Infração Gravíssima', 
     ufp: 10000, 
     fundamentacao: 'Art. 24-A, § 2º, IV; e § 6º, I e II', 
-    desc: 'Reincidência grave e outras hipóteses extremas previstas em ato regulamentar.',
+    desc: 'Reincidência nas condutas classificadas como graves (como fornecimento de documentos adulterados, obstrução à fiscalização, descumprimento de legislação/contratos e grave violação dos padrões de qualidade). Outras hipóteses previstas em ato regulamentar.',
     baseLegal: 'Lei Nº 6.661/2009'
   }
 ];
+
+export const ENVIO_INFORMACOES = [
+  { id: 'omissao', nome: 'Omissão em Enviar Informações', min_ufp: 100, max_ufp: 500, fundamentacao: 'Art. 6º, caput', baseLegal: 'Res. 01/2018' },
+  { id: 'falsas', nome: 'Informações Falsas ou Obstrução', min_ufp: 100, max_ufp: 10000, fundamentacao: 'Art. 6º, § 2º', baseLegal: 'Res. 01/2018' }
+];
+
+export const CRITERIOS_DOSIMETRIA = [
+  { id: 'baixa', nome: 'Baixa', peso: 0 },
+  { id: 'media', nome: 'Média', peso: 0.5 },
+  { id: 'alta', nome: 'Alta', peso: 1 }
+];
+
+export function calcularUfpEnvioInformacoes(tipo: string, gravidade: string, relevancia: string): number {
+  const conduta = ENVIO_INFORMACOES.find(e => e.id === tipo) || ENVIO_INFORMACOES[0];
+  const pesoGravidade = CRITERIOS_DOSIMETRIA.find(c => c.id === gravidade)?.peso ?? 0.5;
+  const pesoRelevancia = CRITERIOS_DOSIMETRIA.find(c => c.id === relevancia)?.peso ?? 0.5;
+  
+  // Peso final varia de 0 a 1 (média dos dois pesos)
+  const pesoFinal = (pesoGravidade + pesoRelevancia) / 2;
+  const amplitude = conduta.max_ufp - conduta.min_ufp;
+  
+  return conduta.min_ufp + (amplitude * pesoFinal);
+}
 
 export const PRAZOS_ENVIO_AGRESE = [
   { id: 'periodicas', nome: 'Informações Periódicas', prazo: 'Até o 10º dia do mês subsequente', base: 'Art. 4º, § 2º' },
@@ -260,6 +283,7 @@ export function calcularMultaAGRESE(params: {
   meses_mora?: number;
   ipca_anual?: number;
   juros_mensal?: number;
+  multiplicador_base?: number; // Para tratar reincidência 4x do envio
 }): ResultadoMultaAGRESE {
   const ufp = params.valor_ufp ?? PARAMETROS_DEFAULT.UFP_SE_VALOR;
   const ipca = (params.ipca_anual ?? PARAMETROS_DEFAULT.IPCA_ANUAL) / 100;
@@ -271,7 +295,8 @@ export function calcularMultaAGRESE(params: {
     PARAMETROS_DEFAULT.UFP_SE_TETO
   );
 
-  const valor_base = ufp_qtd * ufp;
+  const multiplicador = params.multiplicador_base ?? 1;
+  const valor_base = ufp_qtd * ufp * multiplicador;
 
   // Selecionar agravantes e atenuantes
   const agravantes = AGRAVANTES_DISPONIVEIS.filter((a) =>
@@ -311,7 +336,7 @@ export function calcularMultaAGRESE(params: {
 
   // Breakdown detalhado
   const breakdown: BreakdownItem[] = [
-    { descricao: `Valor Base: ${ufp_qtd} UFP/SE × R$ ${ufp.toFixed(2)}`, valor: valor_base, tipo: 'base' },
+    { descricao: `Valor Base: ${ufp_qtd} UFP/SE × R$ ${ufp.toFixed(2)}${multiplicador > 1 ? ` × ${multiplicador}x` : ''}`, valor: valor_base, tipo: 'base' },
     ...agravantes.map((a) => ({
       descricao: `Agravante: ${a.nome}`,
       valor: valor_base * (a.percentual / 100),
