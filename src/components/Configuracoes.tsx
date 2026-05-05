@@ -36,6 +36,8 @@ export default function Configuracoes() {
         { chave: 'IPCA_ANUAL', valor: settings.ipca_anual.toString() },
         { chave: 'JUROS_MORA_MENSAL', valor: settings.juros_mensal.toString() },
         { chave: 'MARGEM_EBITDA', valor: settings.margem_ebitda.toString() },
+        { chave: 'PORTARIA_REF', valor: settings.portaria_ref },
+        { chave: 'RESOLUCAO_REF', valor: settings.resolucao_ref },
       ];
 
       for (const item of updates) {
@@ -239,6 +241,28 @@ export default function Configuracoes() {
                 onChange={(e) => updateSettings({ margem_ebitda: parseFloat(e.target.value) })}
               />
             </div>
+          </div>
+
+          {/* Portaria Ref */}
+          <div className="input-group">
+            <label className="spd-label">Referência de Portaria (SEFAZ-SE)</label>
+            <input 
+              type="text" 
+              className="spd-input" 
+              value={settings.portaria_ref}
+              onChange={(e) => updateSettings({ portaria_ref: e.target.value })}
+            />
+          </div>
+
+          {/* Resolução Ref */}
+          <div className="input-group">
+            <label className="spd-label">Referência de Resolução (AGRESE)</label>
+            <input 
+              type="text" 
+              className="spd-input" 
+              value={settings.resolucao_ref}
+              onChange={(e) => updateSettings({ resolucao_ref: e.target.value })}
+            />
           </div>
         </div>
 

@@ -67,13 +67,17 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
           if (data && !error) {
             const supabaseMap: Record<string, any> = {};
             data.forEach(item => {
-              const val = parseFloat(item.valor);
-              if (!isNaN(val)) {
-                if (item.chave === 'UFP_SE_VALOR') supabaseMap.ufp_valor = val;
-                if (item.chave === 'TARIFA_MEDIA') supabaseMap.tarifa_media = val;
-                if (item.chave === 'IPCA_ANUAL') supabaseMap.ipca_anual = val;
-                if (item.chave === 'JUROS_MORA_MENSAL') supabaseMap.juros_mensal = val;
-                if (item.chave === 'MARGEM_EBITDA') supabaseMap.margem_ebitda = val;
+              if (item.chave === 'PORTARIA_REF') supabaseMap.portaria_ref = item.valor;
+              else if (item.chave === 'RESOLUCAO_REF') supabaseMap.resolucao_ref = item.valor;
+              else {
+                const val = parseFloat(item.valor);
+                if (!isNaN(val)) {
+                  if (item.chave === 'UFP_SE_VALOR') supabaseMap.ufp_valor = val;
+                  if (item.chave === 'TARIFA_MEDIA') supabaseMap.tarifa_media = val;
+                  if (item.chave === 'IPCA_ANUAL') supabaseMap.ipca_anual = val;
+                  if (item.chave === 'JUROS_MORA_MENSAL') supabaseMap.juros_mensal = val;
+                  if (item.chave === 'MARGEM_EBITDA') supabaseMap.margem_ebitda = val;
+                }
               }
             });
             currentSettings = { ...currentSettings, ...supabaseMap };
