@@ -410,7 +410,9 @@ export default function SimuladorAGRESE() {
         )}
 
         {/* Parâmetros base */}
-        <div className="glass-card" style={{ padding: 20 }}>
+        {categoriaSimulacao !== 'taxa' && (
+          <>
+            <div className="glass-card" style={{ padding: 20 }}>
           <SectionHeader
             title="Parâmetros da Autuação"
             subtitle="Cláusula 22.1.2 do CPA — AGRESE"
@@ -566,6 +568,8 @@ export default function SimuladorAGRESE() {
             unit="%"
           />
         </div>
+        </>
+        )}
 
         {/* Botões */}
         <div style={{ display: 'flex', gap: 12 }}>

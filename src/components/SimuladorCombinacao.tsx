@@ -5,6 +5,7 @@ import {
   calcularCombinacao,
   calcularEquacaoD,
   calcularMultaAGRESE,
+  MATRIZ_INFRACOES,
   PARAMETROS_DEFAULT,
   formatBRL,
   formatM3,
@@ -30,7 +31,9 @@ export default function SimuladorCombinacao() {
 
   // Multa AGRESE params
   const [usarAGRESE, setUsarAGRESE] = useState(true);
-  const [ufpAgrese, setUfpAgrese] = useState(3500);
+  const [ufpAgrese, setUfpAgrese] = useState(100);
+  const [gravidadeId, setGravidadeId] = useState<string>('');
+  const [descricaoOcorrencia, setDescricaoOcorrencia] = useState<string>('');
   const [moresMora, setMesesMora] = useState(0);
   const [agravantesAgrese, setAgravantesAgrese] = useState<string[]>([]);
 
@@ -156,14 +159,61 @@ export default function SimuladorCombinacao() {
           </div>
           {usarAGRESE && (
             <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-              <ParamInput
-                label={`Quantidade UFP/SE × R$ ${settings.ufp_valor.toFixed(2)}`}
-                value={ufpAgrese}
-                onChange={setUfpAgrese}
-                min={100}
-                max={10000}
-                step={100}
-              />
+              <div>
+                <label className="spd-label">Hipótese de Enquadramento</label>
+                <select 
+                  className="spd-input" 
+                  style={{ width: '100%', cursor: 'pointer' }}
+                  value={gravidadeId && descricaoOcorrencia ? `${gravidadeId}|${descricaoOcorrencia}` : ""}
+                  onChange={(e) => {
+                    const val = e.target.value;
+                    if (!val) {
+                      setGravidadeId("");
+                      setDescricaoOcorrencia("");
+                      return;
+                    }
+                    const [mId, ...rest] = val.split('|');
+                    const hip = rest.join('|');
+                    
+                    setGravidadeId(mId);
+                    setDescricaoOcorrencia(hip);
+                    
+                    const matriz = MATRIZ_INFRACOES.find(m => m.id === mId);
+                    if (matriz) {
+                      setUfpAgrese(matriz.ufp);
+                    }
+                  }}
+                >
+                  <option value="">Selecione o enquadramento...</option>
+                  {MATRIZ_INFRACOES.map(m => (
+                    <optgroup key={m.id} label={`${m.nome} — ${m.ufp} UFPs`}>
+                      {m.hipoteses?.map((h, i) => (
+                        <option key={`${m.id}-${i}`} value={`${m.id}|${h}`}>
+                          {h.length > 100 ? h.substring(0, 100) + '...' : h}
+                        </option>
+                      ))}
+                    </optgroup>
+                  ))}
+                </select>
+
+                {gravidadeId && (
+                  <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)', background: 'rgba(59,130,246,0.05)', padding: '10px', borderRadius: 8, marginTop: 5 }}>
+                    <div style={{ marginBottom: 6 }}><b>Classificação da Gravidade Automática:</b> {MATRIZ_INFRACOES.find(m => m.id === gravidadeId)?.nome}</div>
+                    <div style={{ marginBottom: 6 }}><b>Base Legal:</b> {MATRIZ_INFRACOES.find(m => m.id === gravidadeId)?.fundamentacao}</div>
+                    <div style={{ fontStyle: 'italic', color: '#666' }}>{descricaoOcorrencia}</div>
+                  </div>
+                )}
+                <div style={{ opacity: 0.7, pointerEvents: 'none', marginTop: 12 }}>
+                  <ParamInput
+                    label="Quantidade de UFP/SE (Fixo por Lei)"
+                    value={ufpAgrese}
+                    onChange={() => {}}
+                    min={100}
+                    max={10000}
+                    step={100}
+                  />
+                </div>
+              </div>
               <ParamInput label="Meses com Mora" value={moresMora} onChange={setMesesMora} min={0} max={60} step={1} />
               <div>
                 <label className="spd-label">Agravantes AGRESE</label>
