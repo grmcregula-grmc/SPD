@@ -685,12 +685,27 @@ export default function SimuladorAGRESE() {
                 onClick={async () => {
                   if (!resultadoTaxa) return;
                   const imageData = await captureElement(resultRef.current);
+
+                  const nivelRisco: 'BAIXO' | 'MODERADO' | 'ALTO' | 'CRÍTICO' =
+                    resultadoTaxa.valor_total < 50000 ? 'BAIXO' :
+                    resultadoTaxa.valor_total < 200000 ? 'MODERADO' :
+                    resultadoTaxa.valor_total < 500000 ? 'ALTO' : 'CRÍTICO';
+
                   generatePDFReport({
                     titulo: 'Relatório de Estimativa de Penalidade',
-                    subtitulo: `Taxa de Fiscalização AGRESE (Lei 6.661/2009)`,
+                    subtitulo: `Taxa de Fiscalização AGRESE — Lei Estadual Nº 6.661/2009, Art. 24, §§ 4º e 5º`,
                     total: resultadoTaxa.valor_total,
+                    valorBase: resultadoTaxa.valor_original,
+                    valorFinal: resultadoTaxa.valor_total,
                     dataOcorrencia: dataOcorrencia,
                     descricaoOcorrencia: descricaoOcorrencia || 'Atraso no pagamento da Taxa de Fiscalização',
+                    breakdown: resultadoTaxa.breakdown.map((b, i) => ({
+                      descricao: b.descricao,
+                      valor: b.valor,
+                      isBold: i === resultadoTaxa.breakdown.length - 1,
+                    })),
+                    nivelRisco,
+                    fundamentacaoLegal: `Art. 24, § 4º da Lei Estadual Nº 6.661/2009. Atraso sujeita o prestador a juros de mora (SELIC acumulada mês a mês) e multa de mora (2% se pago no mês seguinte ao vencimento, ou 10% posteriormente). Nos termos do § 5º, os juros de mora não incidem sobre o valor da multa de mora.`,
                     detalhes: resultadoTaxa.breakdown.map(b => ({ label: b.descricao, clause: 'Art. 24, § 4º', value: b.valor })),
                     identificador: `EST-TAXA-${Date.now().toString().slice(-6)}`,
                     image: imageData
@@ -818,12 +833,45 @@ export default function SimuladorAGRESE() {
                     paramsTextuais.push({ label: 'Justificativa da Relevância', valor: justificativaRelevancia });
                   }
 
+                  const nivelRiscoMulA: 'BAIXO' | 'MODERADO' | 'ALTO' | 'CRÍTICO' =
+                    resultado.valor_com_mora < 100000 ? 'BAIXO' :
+                    resultado.valor_com_mora < 400000 ? 'MODERADO' :
+                    resultado.valor_com_mora < 800000 ? 'ALTO' : 'CRÍTICO';
+
+                  const breakdownMulA: import('@/lib/reports').PDFBreakdownItem[] = [
+                    { descricao: `Valor Base: ${resultado.ufp_quantidade} UFP/SE × R$ ${resultado.valor_ufp.toFixed(2)}${multiplicadorStr}`, valor: resultado.valor_base },
+                    ...resultado.agravantes.map(a => ({
+                      descricao: `Agravante: ${a.nome}`,
+                      valor: resultado.valor_base * (a.percentual / 100),
+                      percentual: `+${a.percentual}%`,
+                    })),
+                    ...resultado.atenuantes.map(a => ({
+                      descricao: `Atenuante: ${a.nome}`,
+                      valor: -(resultado.valor_majorado * (a.percentual / 100)),
+                      percentual: `-${a.percentual}%`,
+                    })),
+                    { descricao: 'Valor Final (sem mora)', valor: resultado.valor_final, isBold: true },
+                    ...(resultado.meses_mora > 0 ? [{
+                       descricao: `Mora: ${resultado.meses_mora} meses (IPCA ${ipcaAnual}% a.a. + 1% a.m.)`,
+                      valor: resultado.valor_com_mora - resultado.valor_final,
+                      percentual: `${resultado.meses_mora}m`,
+                    }] : []),
+                    ...(resultado.meses_mora > 0 ? [{ descricao: 'TOTAL COM MORA', valor: resultado.valor_com_mora, isBold: true }] : []),
+                  ];
+
                   generatePDFReport({
-                    titulo: 'Relatório de Estimativa de Penalidade',
+                    titulo: 'Relatório de Estimativa de Penalidade — Multa AGRESE',
                     subtitulo: `CPA — Regime Sancionatório AGRESE. Valor da UFP/SE: R$ ${resultado.valor_ufp.toFixed(2)}`,
                     total: resultado.valor_com_mora,
+                    valorBase: resultado.valor_base,
+                    valorFinal: resultado.valor_final,
                     dataOcorrencia: dataOcorrencia,
                     descricaoOcorrencia: descricaoOcorrencia,
+                    agravantes: resultado.agravantes.map(a => ({ nome: a.nome, percentual: a.percentual, clausula: a.clausula })),
+                    atenuantes: resultado.atenuantes.map(a => ({ nome: a.nome, percentual: a.percentual, clausula: a.clausula })),
+                    breakdown: breakdownMulA,
+                    nivelRisco: nivelRiscoMulA,
+                    fundamentacaoLegal: `Multa aplicada com base na Cláusula 22.1.2 do CPA — Regime sancionatório da AGRESE. UFP/SE conforme ${settings.portaria_ref}. Dosimetria: Cláusulas 22.11 e 22.12 do CPA. Mora: IPCA + 1% a.m. (pro rata die) após 20 dias do trânsito em julgado. Resolução AGRESE nº 96/2025.`,
                     detalhes: detalhes,
                     parametrosTextuais: paramsTextuais,
                     identificador: `EST-AGRE-${Date.now().toString().slice(-6)}`,

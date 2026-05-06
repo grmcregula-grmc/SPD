@@ -307,18 +307,34 @@ export default function SimuladorEquacaoD() {
                   if (!resultado) return;
                   const imageData = await captureElement(resultRef.current);
 
+                  const nivelRiscoEqD: 'BAIXO' | 'MODERADO' | 'ALTO' | 'CRÍTICO' =
+                    resultado.desconto_d < 100000 ? 'BAIXO' :
+                    resultado.desconto_d < 500000 ? 'MODERADO' :
+                    resultado.desconto_d < 1000000 ? 'ALTO' : 'CRÍTICO';
+
+                  const breakdownEqD = resultado.etapas.map((e, i) => ({
+                    descricao: `${e.numero ? `Etapa ${e.numero}: ` : ''}${e.titulo}`,
+                    valor: Number(e.resultado),
+                    isBold: i === resultado.etapas.length - 1,
+                  }));
+
                   const detalhes = resultado.etapas
                     .filter(e => e.unidade === 'R$' || e.numero === 7)
-                    .map(e => ({ 
-                      label: e.titulo, 
-                      clause: 'CI Cl. 11.2', 
-                      value: e.resultado 
+                    .map(e => ({
+                      label: e.titulo,
+                      clause: 'CI Cl. 11.2',
+                      value: e.resultado
                     }));
 
                   generatePDFReport({
-                    titulo: 'Relatório de Cálculo — Equação D',
-                    subtitulo: `Lucros Cessantes Automáticos (CI Cláusula 11.2). Volume Não Fornecido: ${formatM3(resultado.volume_nao_fornecido)}`,
+                    titulo: 'Relatório de Cálculo — Equação D (Desconto Coercitivo)',
+                    subtitulo: `Lucros Cessantes Automáticos — CI Cláusula 11.2. Volume Não Fornecido: ${formatM3(resultado.volume_nao_fornecido)}`,
                     total: resultado.desconto_d,
+                    valorBase: resultado.volume_nao_fornecido * (resultado.etapas.find(e => e.numero === 1)?.resultado ?? 0) || resultado.desconto_d,
+                    valorFinal: resultado.desconto_d,
+                    nivelRisco: nivelRiscoEqD,
+                    breakdown: breakdownEqD,
+                    fundamentacaoLegal: `Desconto D calculado conforme Cláusula 11.2 do Contrato de Interdependência (CI). Dedução automática por volume de água não fornecido pela DESO, aplicável à fatura mensal atacadista do período de referência. Base: IPD atual e volume contratado versus realizado.`,
                     detalhes: detalhes,
                     identificador: `EST-EQD-${Date.now().toString().slice(-6)}`,
                     image: imageData

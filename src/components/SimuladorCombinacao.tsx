@@ -524,6 +524,11 @@ export default function SimuladorCombinacao() {
                   if (!resultado) return;
                   const imageData = await captureElement(resultRef.current);
 
+                  const nivelRiscoComb: 'BAIXO' | 'MODERADO' | 'ALTO' | 'CRÍTICO' =
+                    resultado.total_impacto < 150000 ? 'BAIXO' :
+                    resultado.total_impacto < 600000 ? 'MODERADO' :
+                    resultado.total_impacto < 1200000 ? 'ALTO' : 'CRÍTICO';
+
                   const detalhes = [
                     { label: 'Equação D (CI Cl. 11.2)', clause: 'Cl. 11.2 CI', value: resultado.equacao_d },
                     { label: 'Multa AGRESE Matriz', clause: 'Lei 6.661/09', value: resultado.multa_agrese_matriz },
@@ -531,10 +536,22 @@ export default function SimuladorCombinacao() {
                     { label: 'Multa CI (Cl. 15)', clause: 'Cl. 15 CI', value: resultado.multa_ci },
                   ].filter(d => d.value > 0);
 
+                  const breakdownComb = [
+                    ...(resultado.equacao_d > 0 ? [{ descricao: 'Desconto D — Equação D (CI Cl. 11.2)', valor: resultado.equacao_d }] : []),
+                    ...(resultado.multa_agrese_matriz > 0 ? [{ descricao: 'Multa AGRESE — Matriz de Infrações (Lei 6.661/09)', valor: resultado.multa_agrese_matriz }] : []),
+                    ...(resultado.multa_agrese_prazos > 0 ? [{ descricao: 'Multa AGRESE — Prazos/Omissão (Res. 01/18)', valor: resultado.multa_agrese_prazos }] : []),
+                    ...(resultado.multa_ci > 0 ? [{ descricao: 'Multa Contratual CI (Cl. 15)', valor: resultado.multa_ci }] : []),
+                    { descricao: 'IMPACTO TOTAL COMBINADO', valor: resultado.total_impacto, isBold: true },
+                  ];
+
                   generatePDFReport({
-                    titulo: 'Relatório de Impacto Combinado (Combinação de Penalidades)',
+                    titulo: 'Relatório de Impacto Combinado — Múltiplas Penalidades',
                     subtitulo: `Estimativa de Risco Multicontratual — CPA + CI. ${resultado.descricao_cenario}`,
                     total: resultado.total_impacto,
+                    valorFinal: resultado.total_impacto,
+                    nivelRisco: nivelRiscoComb,
+                    breakdown: breakdownComb,
+                    fundamentacaoLegal: `Simulação combinada de penalidades aplicáveis simultaneamente ao mesmo evento de descumprimento contratual. Equação D: Cláusula 11.2 do Contrato de Interdependência (CI). Multas AGRESE: Lei Estadual Nº 6.661/2009 e Resolução AGRESE Nº 01/2018. Multa Contratual: Cláusula 15 do CI. Resolução AGRESE 96/2025.`,
                     detalhes: detalhes,
                     identificador: `EST-COMB-${Date.now().toString().slice(-6)}`,
                     image: imageData
