@@ -8,6 +8,7 @@ import { isSupabaseConfigured } from '@/lib/supabase';
 import { generatePDFReport } from '@/lib/reports';
 import { ParamInput } from '@/components/ui';
 import { PROCESSOS_REAIS } from '@/lib/dadosReaisProcessos';
+import SpreadsheetImporter from '@/components/SpreadsheetImporter';
 import { 
   PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend,
   BarChart, Bar, XAxis, YAxis, CartesianGrid, AreaChart, Area
@@ -28,6 +29,7 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
   const [editingOcorrId, setEditingOcorrId] = React.useState<string | null>(null);
   const [selectedContract, setSelectedContract] = React.useState<'Ambos' | 'CPA' | 'CI'>('Ambos');
   const [importandoDados, setImportandoDados] = React.useState(false);
+  const [showImporter, setShowImporter] = React.useState(false);
   const [ocorrForm, setOcorrForm] = React.useState<{ identificador: string; nomeCustom: string; descricaoCustom: string; classificacao: string; data: string }>({ 
     identificador: '', 
     nomeCustom: '', 
@@ -670,18 +672,19 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
               </div>
               <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
                 <button
-                  onClick={handleImportarDadosReais}
-                  disabled={importandoDados}
-                  title="Importar processos reais da Planilha GRMC 2025/2026"
+                  onClick={() => setShowImporter(true)}
+                  title="Buscar processos reais da Planilha GRMC em tempo real"
                   style={{
                     fontSize: '0.65rem', fontWeight: 800, color: 'white',
-                    background: importandoDados ? '#94a3b8' : 'linear-gradient(135deg, #1e3a8a, #3b82f6)',
-                    border: 'none', cursor: importandoDados ? 'not-allowed' : 'pointer',
-                    padding: '5px 10px', borderRadius: 8, display: 'flex', alignItems: 'center', gap: 4,
-                    boxShadow: '0 2px 8px rgba(59,130,246,0.3)'
+                    background: 'linear-gradient(135deg, #2563eb, #7c3aed)',
+                    border: 'none', cursor: 'pointer',
+                    padding: '5px 12px', borderRadius: 8, display: 'flex', alignItems: 'center', gap: 4,
+                    boxShadow: '0 2px 12px rgba(37,99,235,0.4)',
+                    transition: 'all 0.2s'
                   }}
+                  className="hover:scale-105"
                 >
-                  {importandoDados ? '⏳ Importando...' : '📋 Importar Planilha GRMC'}
+                  🔍 Buscar na Planilha Viva
                 </button>
                 <button onClick={clearConsolidated} style={{ fontSize: '0.7rem', fontWeight: 800, color: '#ef4444', background: 'none', border: 'none', cursor: 'pointer', textDecoration: 'underline' }}>Limpar Gestão</button>
               </div>
@@ -985,6 +988,16 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
           </div>
         </div>
         )}
+
+      {showImporter && (
+        <SpreadsheetImporter 
+          onClose={() => setShowImporter(false)} 
+          onNavigate={(tab) => {
+            setShowImporter(false);
+            if (onNavigate) onNavigate(tab);
+          }}
+        />
+      )}
     </div>
   );
 }

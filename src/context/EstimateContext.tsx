@@ -30,6 +30,18 @@ export interface SavedEstimate {
   image?: string;
 }
 
+export interface DraftProcess {
+  id_doc: string;
+  solicitante: string;
+  assunto: string;
+  data_recebimento: string;
+  prazo_externo: string;
+  data_final?: string;
+  atraso_dias: number;
+  infracao_sugerida: string;
+  contexto: string;
+}
+
 interface EstimateContextType {
   history: SavedEstimate[];
   addToHistory: (estimate: Omit<SavedEstimate, 'id' | 'data'>) => void;
@@ -41,6 +53,9 @@ interface EstimateContextType {
   clearConsolidated: () => void;
   updateClassificacao: (id: string, classificacao: ClassificacaoEstimate) => void;
   updateOcorrencia: (id: string, fields: Partial<Pick<SavedEstimate, 'identificador' | 'nomeCustom' | 'descricaoCustom' | 'classificacao' | 'data'>>) => void;
+
+  draftProcess: DraftProcess | null;
+  setDraftProcess: (draft: DraftProcess | null) => void;
 }
 
 const EstimateContext = createContext<EstimateContextType | undefined>(undefined);
@@ -48,6 +63,7 @@ const EstimateContext = createContext<EstimateContextType | undefined>(undefined
 export function EstimateProvider({ children }: { children: React.ReactNode }) {
   const [history, setHistory] = useState<SavedEstimate[]>([]);
   const [consolidated, setConsolidated] = useState<SavedEstimate[]>([]);
+  const [draftProcess, setDraftProcess] = useState<DraftProcess | null>(null);
   const [isLoaded, setIsLoaded] = useState(false);
 
   useEffect(() => {
@@ -129,6 +145,7 @@ export function EstimateProvider({ children }: { children: React.ReactNode }) {
       history, addToHistory, removeFromHistory,
       consolidated, addToConsolidated, removeFromConsolidated, clearConsolidated,
       updateClassificacao, updateOcorrencia,
+      draftProcess, setDraftProcess,
     }}>
       {children}
     </EstimateContext.Provider>

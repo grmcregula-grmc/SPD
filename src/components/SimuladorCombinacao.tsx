@@ -59,7 +59,7 @@ export default function SimuladorCombinacao() {
   const [multatCIPerc, setMultaCIPerc] = useState(1);
 
   const [resultado, setResultado] = useState<ResultadoCombinacao | null>(null);
-  const { addToHistory } = useEstimates();
+  const { addToHistory, draftProcess, setDraftProcess } = useEstimates();
   const resultRef = React.useRef<HTMLDivElement>(null);
 
   React.useEffect(() => {
@@ -67,6 +67,48 @@ export default function SimuladorCombinacao() {
     setTarifaMedia(settings.tarifa_media);
     setMargemEbitda(settings.margem_ebitda);
   }, [settings.ipd, settings.tarifa_media, settings.margem_ebitda]);
+
+  // Efeito para carregar rascunho da planilha
+  React.useEffect(() => {
+    if (draftProcess) {
+      const isVolume = draftProcess.assunto.toLowerCase().includes('volume') || 
+                       draftProcess.assunto.toLowerCase().includes('parada') ||
+                       draftProcess.assunto.toLowerCase().includes('redução');
+      
+      const isAtraso = draftProcess.atraso_dias > 0 || 
+                       draftProcess.assunto.toLowerCase().includes('prazos') ||
+                       draftProcess.assunto.toLowerCase().includes('envio');
+
+      if (isVolume) {
+        setUsarEquacaoD(true);
+        // Tenta encontrar m3
+        const match = draftProcess.assunto.match(/(\d+[\d.,]*)\s*m³/i);
+        if (match) {
+          const val = parseFloat(match[1].replace(/\./g, '').replace(',', '.'));
+          if (!isNaN(val)) setVolumeNF(val);
+        }
+      }
+
+      if (isAtraso) {
+        setUsarAgresePrazos(true);
+        if (draftProcess.assunto.toLowerCase().includes('periódica')) {
+          setTipoEnvio('PERIÓDICA');
+        } else {
+          setTipoEnvio('SOLICITAÇÃO');
+        }
+        setNivelGravidadePrazos('MÉDIA');
+        setNivelRelevanciaPrazos('MÉDIA');
+      }
+
+      setDescricaoOcorrenciaMatriz(`[${draftProcess.id_doc}] ${draftProcess.assunto} | Solicitante: ${draftProcess.solicitante}`);
+      
+      // Limpa resultado anterior
+      setResultado(null);
+      
+      // Limpa o rascunho após carregar
+      setDraftProcess(null);
+    }
+  }, [draftProcess, setDraftProcess]);
 
   React.useEffect(() => {
     if (tipoEnvio) {

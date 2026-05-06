@@ -58,7 +58,7 @@ export default function SimuladorAGRESE() {
   const [selicMensal, setSelicMensal] = useState(1.07); // 1.07% a.m. ≈ 13% a.a.
   const [resultadoTaxa, setResultadoTaxa] = useState<ResultadoTaxaFiscalizacao | null>(null);
 
-  const { addToHistory } = useEstimates();
+  const { addToHistory, draftProcess, setDraftProcess } = useEstimates();
   const resultRef = React.useRef<HTMLDivElement>(null);
 
   // Sincronizar com configurações globais
@@ -66,6 +66,36 @@ export default function SimuladorAGRESE() {
     setValorUfp(settings.ufp_valor);
     setIpcaAnual(settings.ipca_anual);
   }, [settings.ufp_valor, settings.ipca_anual]);
+
+  // Efeito para carregar rascunho da planilha
+  React.useEffect(() => {
+    if (draftProcess) {
+      // Se tiver "TFSPR" ou "Taxa" no assunto/contexto, muda para aba de Taxa
+      const isTaxa = draftProcess.id_doc.includes('TFSPR') || draftProcess.assunto.toLowerCase().includes('taxa');
+      
+      if (isTaxa) {
+        setCategoriaSimulacao('taxa');
+        setValorTaxaOriginal(159000); // Valor médio da TFSPR se não souber
+        setMesesAtraso(Math.ceil(draftProcess.atraso_dias / 30) || 1);
+      } else {
+        setCategoriaSimulacao('envio');
+        // Tenta mapear o tipo de envio
+        if (draftProcess.assunto.toLowerCase().includes('periódica') || draftProcess.assunto.toLowerCase().includes('relatório')) {
+          setTipoEnvio('PERIÓDICA');
+        } else {
+          setTipoEnvio('SOLICITAÇÃO');
+        }
+        setNivelGravidade('MÉDIA');
+        setNivelRelevancia('MÉDIA');
+      }
+
+      setDescricaoOcorrencia(`[${draftProcess.id_doc}] ${draftProcess.assunto}\nSolicitante: ${draftProcess.solicitante}\nContexto: ${draftProcess.contexto}`);
+      setDataOcorrencia(draftProcess.data_recebimento ? new Date(draftProcess.data_recebimento).toISOString().split('T')[0] : new Date().toISOString().split('T')[0]);
+      
+      // Limpa o rascunho após carregar para evitar loops ou recargas indesejadas
+      setDraftProcess(null);
+    }
+  }, [draftProcess, setDraftProcess]);
 
   React.useEffect(() => {
     if (categoriaSimulacao === 'envio' && tipoEnvio) {

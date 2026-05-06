@@ -25,7 +25,7 @@ export default function SimuladorEquacaoD() {
   const [iceEsgoto, setIceEsgoto] = useState(PARAMETROS_DEFAULT.ICE_COBERTURA_ESGOTO);
   const [impostos, setImpostos] = useState(PARAMETROS_DEFAULT.IMPOSTOS_RECEITA);
   const [resultado, setResultado] = useState<ResultadoEquacaoD | null>(null);
-  const { addToHistory } = useEstimates();
+  const { addToHistory, draftProcess, setDraftProcess } = useEstimates();
   const resultRef = React.useRef<HTMLDivElement>(null);
 
   // Sincronizar com configurações globais
@@ -34,6 +34,31 @@ export default function SimuladorEquacaoD() {
     setTarifaMedia(settings.tarifa_media);
     setMargemEbitda(settings.margem_ebitda);
   }, [settings.ipd, settings.tarifa_media, settings.margem_ebitda]);
+
+  // Efeito para carregar rascunho da planilha
+  React.useEffect(() => {
+    if (draftProcess) {
+      // Se o assunto envolver "Volume", "Parada" ou "Redução", preenchemos o contexto
+      const isVolume = draftProcess.assunto.toLowerCase().includes('volume') || 
+                       draftProcess.assunto.toLowerCase().includes('parada') ||
+                       draftProcess.assunto.toLowerCase().includes('redução');
+      
+      if (isVolume) {
+        // Tenta encontrar um número que pareça volume (m3) no assunto/contexto
+        const match = draftProcess.assunto.match(/(\d+[\d.,]*)\s*m³/i);
+        if (match) {
+          const val = parseFloat(match[1].replace(/\./g, '').replace(',', '.'));
+          if (!isNaN(val)) setVolumeNaoFornecido(val);
+        }
+      }
+      
+      // Limpa resultado anterior se houver
+      setResultado(null);
+      
+      // Limpa o rascunho após carregar
+      setDraftProcess(null);
+    }
+  }, [draftProcess, setDraftProcess]);
 
   const calcular = useCallback(() => {
     const res = calcularEquacaoD({
