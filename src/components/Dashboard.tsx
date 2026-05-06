@@ -520,9 +520,10 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
           {/* COMPOSIÇÃO POR CLASSIFICAÇÃO */}
           {(() => {
             const cats = [
-              { label: 'De Fato', color: '#ef4444', value: filteredConsolidated.filter(e => e.classificacao === 'De Fato' || !e.classificacao).reduce((a, b) => a + b.valor, 0) },
-              { label: 'Inércia', color: '#f59e0b', value: filteredConsolidated.filter(e => e.classificacao?.startsWith('Potencial')).reduce((a, b) => a + b.valor, 0) },
-              { label: 'Informativo', color: '#94a3b8', value: filteredConsolidated.filter(e => e.classificacao === 'Informativo').reduce((a, b) => a + b.valor, 0) },
+              { label: 'Penalidade de Fato', color: '#ef4444', value: filteredConsolidated.filter(e => e.classificacao === 'Penalidade de Fato' || e.classificacao === 'De Fato' || !e.classificacao).reduce((a, b) => a + b.valor, 0) },
+              { label: 'Alto Risco de Penalização', color: '#f97316', value: filteredConsolidated.filter(e => e.classificacao === 'Alto Risco de Penalização' || e.classificacao === 'Potencial Alta').reduce((a, b) => a + b.valor, 0) },
+              { label: 'Risco Moderado de Penalização', color: '#f59e0b', value: filteredConsolidated.filter(e => e.classificacao === 'Risco Moderado de Penalização' || e.classificacao === 'Potencial Moderada').reduce((a, b) => a + b.valor, 0) },
+              { label: 'Baixo Risco de Penalização', color: '#94a3b8', value: filteredConsolidated.filter(e => e.classificacao === 'Baixo Risco de Penalização' || e.classificacao === 'Informativo').reduce((a, b) => a + b.valor, 0) },
             ];
             const grandTotal = cats.reduce((a, b) => a + b.value, 0) || 1;
             const pieData = cats.filter(c => c.value > 0);
@@ -531,26 +532,26 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
               <div className="card-hover-effect" style={{ background: 'white', borderRadius: 20, padding: 20, border: '1px solid rgba(0,0,0,0.04)', boxShadow: '0 4px 12px rgba(0,0,0,0.02)', display: 'flex', flexDirection: 'column', gap: 12 }}>
                 <h3 style={{ fontSize: '0.75rem', fontWeight: 900, color: '#1e3a8a', textTransform: 'uppercase', letterSpacing: '0.05em' }}>Densidade de Risco</h3>
                 <div style={{ display: 'flex', alignItems: 'center', height: '100%' }}>
-                  <div style={{ width: '40%', height: 100 }}>
+                  <div style={{ width: '40%', height: 110 }}>
                     <ResponsiveContainer width="100%" height="100%">
                       <PieChart>
-                        <Pie data={pieData.length > 0 ? pieData : [{ label: 'Empty', value: 1 }]} innerRadius={25} outerRadius={40} dataKey="value" stroke="none">
+                        <Pie data={pieData.length > 0 ? pieData : [{ label: 'Empty', value: 1 }]} innerRadius={25} outerRadius={42} dataKey="value" stroke="none">
                           {pieData.length > 0 ? pieData.map((c, i) => <Cell key={i} fill={c.color} />) : <Cell fill="#f1f5f9" />}
                         </Pie>
                       </PieChart>
                     </ResponsiveContainer>
                   </div>
-                  <div style={{ width: '60%', display: 'flex', flexDirection: 'column', gap: 8 }}>
+                  <div style={{ width: '60%', display: 'flex', flexDirection: 'column', gap: 6 }}>
                     {cats.map(c => (
                       <div key={c.label} style={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
                         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                           <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                            <div style={{ width: 8, height: 8, borderRadius: '50%', background: c.color }} />
-                            <span style={{ fontSize: '0.65rem', fontWeight: 800, color: '#475569' }}>{c.label}</span>
+                            <div style={{ width: 7, height: 7, borderRadius: '50%', background: c.color, flexShrink: 0 }} />
+                            <span style={{ fontSize: '0.58rem', fontWeight: 800, color: '#475569', lineHeight: 1.2 }}>{c.label}</span>
                           </div>
-                          <span style={{ fontSize: '0.6rem', fontWeight: 800, color: '#94a3b8' }}>{Math.round((c.value / grandTotal) * 100)}%</span>
+                          <span style={{ fontSize: '0.58rem', fontWeight: 800, color: '#94a3b8', flexShrink: 0, marginLeft: 4 }}>{Math.round((c.value / grandTotal) * 100)}%</span>
                         </div>
-                        <div style={{ height: 4, background: '#f1f5f9', borderRadius: 4, overflow: 'hidden' }}>
+                        <div style={{ height: 3, background: '#f1f5f9', borderRadius: 4, overflow: 'hidden' }}>
                           <div style={{ height: '100%', width: `${(c.value / grandTotal) * 100}%`, background: c.color }} />
                         </div>
                       </div>
@@ -698,20 +699,25 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
                     </div>
                   )}
 
-                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 4, marginTop: 12 }}>
-                    {['De Fato', 'Potencial Alta', 'Potencial Moderada', 'Informativo', 'Outros'].map(cat => (
+                  <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 4, marginTop: 12 }}>
+                    {[
+                      { id: 'Penalidade de Fato', label: '⚖️ Fato', color: '#ef4444' },
+                      { id: 'Alto Risco de Penalização', label: '🔴 Alto Risco', color: '#f97316' },
+                      { id: 'Risco Moderado de Penalização', label: '🟡 Moderado', color: '#f59e0b' },
+                      { id: 'Baixo Risco de Penalização', label: '⬜ Baixo Risco', color: '#94a3b8' },
+                    ].map(cat => (
                       <button 
-                        key={cat} 
-                        onClick={() => updateClassificacao(est.id, cat as any)}
+                        key={cat.id} 
+                        onClick={() => updateClassificacao(est.id, cat.id as any)}
                         style={{ 
-                          padding: '5px 0', borderRadius: 8, fontSize: '0.52rem', fontWeight: 800, border: '1px solid transparent',
-                          background: est.classificacao === cat ? 'rgba(59,130,246,0.1)' : '#f8fafc',
-                          color: est.classificacao === cat ? '#2563eb' : '#64748b',
-                          borderColor: est.classificacao === cat ? '#3b82f6' : 'transparent',
+                          padding: '5px 2px', borderRadius: 8, fontSize: '0.50rem', fontWeight: 800, border: '1px solid transparent',
+                          background: est.classificacao === cat.id ? `${cat.color}18` : '#f8fafc',
+                          color: est.classificacao === cat.id ? cat.color : '#64748b',
+                          borderColor: est.classificacao === cat.id ? cat.color : 'transparent',
                           transition: 'all 0.2s', cursor: 'pointer'
                         }}
                       >
-                        {cat === 'De Fato' ? '⚖️ Fato' : cat.split(' ')[1] || cat}
+                        {cat.label}
                       </button>
                     ))}
                   </div>
@@ -741,57 +747,30 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
       </div>
 
 
-      {/* Grid principal */}
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 24 }}>
-        {/* Simulações de referência */}
-        <div className="glass-card" style={{ padding: 20 }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 18 }}>
-            <div>
-              <h2 style={{ fontSize: '1rem', fontWeight: 700, color: 'var(--text-primary)' }}>📋 Simulações de Referência</h2>
-              <p style={{ fontSize: '0.72rem', color: 'var(--text-muted)' }}>Casuística do Caderno Técnico Paramétrico</p>
-            </div>
-          </div>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-            {simulados.map((s) => (
-              <div key={s.titulo} style={{ padding: '14px', borderRadius: 10, background: `${s.cor}08`, border: `1px solid ${s.cor}20` }}>
-                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 6 }}>
-                  <span style={{ fontSize: '0.82rem', fontWeight: 700, color: 'var(--text-primary)', flex: 1, marginRight: 10 }}>{s.titulo}</span>
-                  <div style={{ textAlign: 'right', flexShrink: 0 }}>
-                    <div style={{ fontFamily: 'JetBrains Mono, monospace', fontSize: '0.9rem', fontWeight: 700, color: s.cor }}>{s.resultado}</div>
-                    <div style={{ fontSize: '0.62rem', fontWeight: 700, color: s.cor, textTransform: 'uppercase' }}>{s.nivel}</div>
-                  </div>
+      {/* Rito sancionatório — largura total após remoção de Simulações de Referência */}
+      <div className="glass-card" style={{ padding: 24 }}>
+        <h2 style={{ fontSize: '1rem', fontWeight: 700, color: 'var(--text-primary)', marginBottom: 4 }}>⚖️ Rito Processual Sancionatório</h2>
+        <p style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginBottom: 22 }}>Fluxo do processo administrativo — AGRESE / DESO</p>
+        <div style={{ position: 'relative', display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(320px, 1fr))', gap: 16 }}>
+          <div style={{ position: 'absolute', left: 15, top: 0, bottom: 0, width: 2, background: 'rgba(59,130,246,0.15)', borderRadius: 1, display: 'none' }} />
+          {fasesSancao.map((f, idx) => {
+            const cor = statusColors[f.status as keyof typeof statusColors];
+            return (
+              <div key={f.fase} style={{ display: 'flex', gap: 14, padding: '14px 16px', borderRadius: 14, background: `${cor}06`, border: `1px solid ${cor}20` }}>
+                <div style={{ width: 32, height: 32, borderRadius: '50%', flexShrink: 0, border: `2px solid ${cor}60`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.75rem', fontWeight: 800, color: cor, background: 'white' }}>
+                  {f.fase}
                 </div>
-                <div style={{ fontSize: '0.72rem', color: 'var(--text-muted)', lineHeight: 1.4 }}>{s.contexto}</div>
+                <div style={{ flex: 1, paddingTop: 2 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+                    <span style={{ fontSize: '0.88rem', fontWeight: 700, color: 'var(--text-primary)' }}>{f.titulo}</span>
+                    {(f.status === 'acao') && <span style={{ fontSize: '0.62rem', fontWeight: 700, color: '#3b82f6', background: 'rgba(59,130,246,0.12)', borderRadius: 20, padding: '1px 7px', border: '1px solid rgba(59,130,246,0.25)' }}>OPORTUNIDADE</span>}
+                    {f.status === 'critico' && <span style={{ fontSize: '0.62rem', fontWeight: 700, color: '#f97316', background: 'rgba(249,115,22,0.12)', borderRadius: 20, padding: '1px 7px', border: '1px solid rgba(249,115,22,0.25)' }}>PRAZO CRÍTICO</span>}
+                  </div>
+                  <div style={{ fontSize: '0.74rem', color: 'var(--text-muted)', lineHeight: 1.5 }}>{f.desc}</div>
+                </div>
               </div>
-            ))}
-          </div>
-        </div>
-
-        {/* Rito sancionatório */}
-        <div className="glass-card" style={{ padding: 20 }}>
-          <h2 style={{ fontSize: '1rem', fontWeight: 700, color: 'var(--text-primary)', marginBottom: 4 }}>⚖️ Rito Processual Sancionatório</h2>
-          <p style={{ fontSize: '0.72rem', color: 'var(--text-muted)', marginBottom: 18 }}>Fluxo do processo administrativo — AGRESE / DESO</p>
-          <div style={{ position: 'relative' }}>
-            <div style={{ position: 'absolute', left: 15, top: 0, bottom: 0, width: 2, background: 'rgba(59,130,246,0.15)', borderRadius: 1 }} />
-            {fasesSancao.map((f, idx) => {
-              const cor = statusColors[f.status as keyof typeof statusColors];
-              return (
-                <div key={f.fase} style={{ display: 'flex', gap: 16, marginBottom: idx < fasesSancao.length - 1 ? 16 : 0, position: 'relative' }}>
-                  <div style={{ width: 32, height: 32, borderRadius: '50%', flexShrink: 0, border: `2px solid ${cor}60`, display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '0.75rem', fontWeight: 800, color: cor, zIndex: 1, background: 'var(--bg-primary)' }}>
-                    {f.fase}
-                  </div>
-                  <div style={{ flex: 1, paddingTop: 4 }}>
-                    <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 3 }}>
-                      <span style={{ fontSize: '0.85rem', fontWeight: 700, color: 'var(--text-primary)' }}>{f.titulo}</span>
-                      {(f.status === 'acao') && <span style={{ fontSize: '0.62rem', fontWeight: 700, color: '#3b82f6', background: 'rgba(59,130,246,0.12)', borderRadius: 20, padding: '1px 7px', border: '1px solid rgba(59,130,246,0.25)' }}>OPORTUNIDADE</span>}
-                      {f.status === 'critico' && <span style={{ fontSize: '0.62rem', fontWeight: 700, color: '#f97316', background: 'rgba(249,115,22,0.12)', borderRadius: 20, padding: '1px 7px', border: '1px solid rgba(249,115,22,0.25)' }}>PRAZO CRÍTICO</span>}
-                    </div>
-                    <div style={{ fontSize: '0.74rem', color: 'var(--text-muted)', lineHeight: 1.4 }}>{f.desc}</div>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
+            );
+          })}
         </div>
       </div>
 
@@ -912,21 +891,26 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
 
               <div>
                 <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 800, color: '#64748b', marginBottom: 6, textTransform: 'uppercase' }}>Tipo / Classificação de Risco</label>
-                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>
-                  {['De Fato', 'Potencial Alta', 'Potencial Moderada', 'Informativo', 'Outros'].map(cat => (
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(2, 1fr)', gap: 8 }}>
+                  {[
+                    { id: 'Penalidade de Fato', color: '#ef4444' },
+                    { id: 'Alto Risco de Penalização', color: '#f97316' },
+                    { id: 'Risco Moderado de Penalização', color: '#f59e0b' },
+                    { id: 'Baixo Risco de Penalização', color: '#94a3b8' },
+                  ].map(cat => (
                     <button 
-                      key={cat}
-                      onClick={() => setOcorrForm(p => ({ ...p, classificacao: cat }))}
+                      key={cat.id}
+                      onClick={() => setOcorrForm(p => ({ ...p, classificacao: cat.id }))}
                       style={{
-                        padding: '10px 4px', borderRadius: 10, fontSize: '0.65rem', fontWeight: 800,
+                        padding: '10px 4px', borderRadius: 10, fontSize: '0.68rem', fontWeight: 800,
                         border: '1px solid',
-                        background: ocorrForm.classificacao === cat ? 'rgba(59,130,246,0.1)' : '#f8fafc',
-                        color: ocorrForm.classificacao === cat ? '#2563eb' : '#64748b',
-                        borderColor: ocorrForm.classificacao === cat ? '#3b82f6' : '#e2e8f0',
+                        background: ocorrForm.classificacao === cat.id ? `${cat.color}15` : '#f8fafc',
+                        color: ocorrForm.classificacao === cat.id ? cat.color : '#64748b',
+                        borderColor: ocorrForm.classificacao === cat.id ? cat.color : '#e2e8f0',
                         cursor: 'pointer'
                       }}
                     >
-                      {cat}
+                      {cat.id}
                     </button>
                   ))}
                 </div>

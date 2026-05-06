@@ -2,7 +2,17 @@
 
 import React, { createContext, useContext, useState, useEffect } from 'react';
 
-export type ClassificacaoEstimate = 'De Fato' | 'Potencial Alta' | 'Potencial Moderada' | 'Informativo' | 'Outros';
+export type ClassificacaoEstimate =
+  | 'Penalidade de Fato'
+  | 'Alto Risco de Penalização'
+  | 'Risco Moderado de Penalização'
+  | 'Baixo Risco de Penalização'
+  // legacy — mantidos para compatibilidade com dados já salvos em localStorage
+  | 'De Fato'
+  | 'Potencial Alta'
+  | 'Potencial Moderada'
+  | 'Informativo'
+  | 'Outros';
 
 export interface SavedEstimate {
   id: string;
