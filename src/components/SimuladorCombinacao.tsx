@@ -71,18 +71,19 @@ export default function SimuladorCombinacao() {
   // Efeito para carregar rascunho da planilha
   React.useEffect(() => {
     if (draftProcess) {
-      const isVolume = draftProcess.assunto.toLowerCase().includes('volume') || 
-                       draftProcess.assunto.toLowerCase().includes('parada') ||
-                       draftProcess.assunto.toLowerCase().includes('redução');
+      const assunto = draftProcess.assunto || '';
+      const isVolume = assunto.toLowerCase().includes('volume') || 
+                       assunto.toLowerCase().includes('parada') ||
+                       assunto.toLowerCase().includes('redução');
       
       const isAtraso = draftProcess.atraso_dias > 0 || 
-                       draftProcess.assunto.toLowerCase().includes('prazos') ||
-                       draftProcess.assunto.toLowerCase().includes('envio');
+                       assunto.toLowerCase().includes('prazos') ||
+                       assunto.toLowerCase().includes('envio');
 
       if (isVolume) {
         setUsarEquacaoD(true);
         // Tenta encontrar m3
-        const match = draftProcess.assunto.match(/(\d+[\d.,]*)\s*m³/i);
+        const match = assunto.match(/(\d+[\d.,]*)\s*m³/i);
         if (match) {
           const val = parseFloat(match[1].replace(/\./g, '').replace(',', '.'));
           if (!isNaN(val)) setVolumeNF(val);
@@ -91,7 +92,7 @@ export default function SimuladorCombinacao() {
 
       if (isAtraso) {
         setUsarAgresePrazos(true);
-        if (draftProcess.assunto.toLowerCase().includes('periódica')) {
+        if (assunto.toLowerCase().includes('periódica')) {
           setTipoEnvio('PERIÓDICA');
         } else {
           setTipoEnvio('SOLICITAÇÃO');

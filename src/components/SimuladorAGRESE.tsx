@@ -71,7 +71,9 @@ export default function SimuladorAGRESE() {
   React.useEffect(() => {
     if (draftProcess) {
       // Se tiver "TFSPR" ou "Taxa" no assunto/contexto, muda para aba de Taxa
-      const isTaxa = draftProcess.id_doc.includes('TFSPR') || draftProcess.assunto.toLowerCase().includes('taxa');
+      const idDoc = draftProcess.id_doc || '';
+      const assunto = draftProcess.assunto || '';
+      const isTaxa = idDoc.includes('TFSPR') || assunto.toLowerCase().includes('taxa');
       
       if (isTaxa) {
         setCategoriaSimulacao('taxa');
@@ -80,7 +82,7 @@ export default function SimuladorAGRESE() {
       } else {
         setCategoriaSimulacao('envio');
         // Tenta mapear o tipo de envio
-        if (draftProcess.assunto.toLowerCase().includes('periódica') || draftProcess.assunto.toLowerCase().includes('relatório')) {
+        if (assunto.toLowerCase().includes('periódica') || assunto.toLowerCase().includes('relatório')) {
           setTipoEnvio('PERIÓDICA');
         } else {
           setTipoEnvio('SOLICITAÇÃO');
@@ -90,7 +92,20 @@ export default function SimuladorAGRESE() {
       }
 
       setDescricaoOcorrencia(`[${draftProcess.id_doc}] ${draftProcess.assunto}\nSolicitante: ${draftProcess.solicitante}\nContexto: ${draftProcess.contexto}`);
-      setDataOcorrencia(draftProcess.data_recebimento ? new Date(draftProcess.data_recebimento).toISOString().split('T')[0] : new Date().toISOString().split('T')[0]);
+      try {
+        if (draftProcess.data_recebimento) {
+          const d = new Date(draftProcess.data_recebimento);
+          if (!isNaN(d.getTime())) {
+            setDataOcorrencia(d.toISOString().split('T')[0]);
+          } else {
+            setDataOcorrencia(new Date().toISOString().split('T')[0]);
+          }
+        } else {
+          setDataOcorrencia(new Date().toISOString().split('T')[0]);
+        }
+      } catch (e) {
+        setDataOcorrencia(new Date().toISOString().split('T')[0]);
+      }
       
       // Limpa o rascunho após carregar para evitar loops ou recargas indesejadas
       setDraftProcess(null);

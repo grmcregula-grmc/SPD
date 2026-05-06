@@ -39,13 +39,14 @@ export default function SimuladorEquacaoD() {
   React.useEffect(() => {
     if (draftProcess) {
       // Se o assunto envolver "Volume", "Parada" ou "Redução", preenchemos o contexto
-      const isVolume = draftProcess.assunto.toLowerCase().includes('volume') || 
-                       draftProcess.assunto.toLowerCase().includes('parada') ||
-                       draftProcess.assunto.toLowerCase().includes('redução');
+      const assunto = draftProcess.assunto || '';
+      const isVolume = assunto.toLowerCase().includes('volume') || 
+                       assunto.toLowerCase().includes('parada') ||
+                       assunto.toLowerCase().includes('redução');
       
       if (isVolume) {
         // Tenta encontrar um número que pareça volume (m3) no assunto/contexto
-        const match = draftProcess.assunto.match(/(\d+[\d.,]*)\s*m³/i);
+        const match = assunto.match(/(\d+[\d.,]*)\s*m³/i);
         if (match) {
           const val = parseFloat(match[1].replace(/\./g, '').replace(',', '.'));
           if (!isNaN(val)) setVolumeNaoFornecido(val);
