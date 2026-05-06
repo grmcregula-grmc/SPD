@@ -25,6 +25,7 @@ import { HistoryPanel } from '@/components/HistoryPanel';
 
 export default function SimuladorAGRESE() {
   const { settings } = useSettings();
+  const { addToHistory, draftProcess, setDraftProcess, updateOcorrencia } = useEstimates();
   const [categoriaSimulacao, setCategoriaSimulacao] = useState<'matriz' | 'envio' | 'taxa'>('matriz');
   
   // States - Comum
@@ -33,6 +34,7 @@ export default function SimuladorAGRESE() {
   const [descricaoOcorrencia, setDescricaoOcorrencia] = useState('');
   const [justificativaGravidade, setJustificativaGravidade] = useState('');
   const [justificativaRelevancia, setJustificativaRelevancia] = useState('');
+  const [linkedEstimateId, setLinkedEstimateId] = useState<string | null>(null);
   
   // States - Matriz e Envio
   const [ufpQuantidade, setUfpQuantidade] = useState(100);
@@ -58,7 +60,6 @@ export default function SimuladorAGRESE() {
   const [selicMensal, setSelicMensal] = useState(1.07); // 1.07% a.m. ≈ 13% a.a.
   const [resultadoTaxa, setResultadoTaxa] = useState<ResultadoTaxaFiscalizacao | null>(null);
 
-  const { addToHistory, draftProcess, setDraftProcess } = useEstimates();
   const resultRef = React.useRef<HTMLDivElement>(null);
 
   // Sincronizar com configurações globais
@@ -70,6 +71,9 @@ export default function SimuladorAGRESE() {
   // Efeito para carregar rascunho da planilha
   React.useEffect(() => {
     if (draftProcess) {
+      if (draftProcess.original_id) {
+        setLinkedEstimateId(draftProcess.original_id);
+      }
       // Se tiver "TFSPR" ou "Taxa" no assunto/contexto, muda para aba de Taxa
       const idDoc = draftProcess.id_doc || '';
       const assunto = draftProcess.assunto || '';
@@ -164,13 +168,6 @@ export default function SimuladorAGRESE() {
     setIpcaAnual(settings.ipca_anual);
     setResultado(null);
   };
-
-  const presets = [
-    { label: 'Sim. I — Máx. Agravantes', ufp: 8500, ag: ['dolo_fraude', 'enriquecimento', 'desobediencia'], at: [], mora: 12 },
-    { label: 'Sim. II — Mitigação Otimizada', ufp: 2000, ag: [], at: ['nexo_terceiro', 'primariedade', 'pagamento_antecipado'], mora: 0 },
-    { label: 'Infração Leve (Piso)', ufp: 100, ag: [], at: ['primariedade'], mora: 0 },
-    { label: 'Infração Grave (Teto)', ufp: 10000, ag: ['dolo_fraude', 'enriquecimento', 'desobediencia', 'reincidencia'], at: [], mora: 6 },
-  ];
 
   return (
     <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 24 }}>
@@ -787,15 +784,8 @@ export default function SimuladorAGRESE() {
                   const detalhes = [
                     { label: `Multa Base (${resultado.ufp_quantidade} UFP/SE)${multiplicadorStr}`, clause: fundamentacaoBase, value: resultado.valor_base },
                     ...resultado.agravantes.map(a => ({ label: `Agravante: ${a.nome}`, clause: a.clausula, value: resultado.valor_base * (a.percentual / 100) })),
+                    ...resultado.atenuantes.map(a => ({ label: `Atenuante: ${a.nome}`, clause: a.clausula, value: -(resultado.valor_majorado * (a.percentual / 100)) }))
                   ];
-
-                  if (resultado.atenuantes.length > 0) {
-                    detalhes.push(...resultado.atenuantes.map(a => ({ 
-                      label: `Atenuante: ${a.nome}`, 
-                      clause: a.clausula, 
-                      value: -(resultado.valor_majorado * (a.percentual / 100)) 
-                    })));
-                  }
 
                   if (resultado.meses_mora > 0) {
                     detalhes.push({ 
@@ -871,8 +861,6 @@ export default function SimuladorAGRESE() {
                     detalhes.push({ label: 'Mora Acumulada', clause: 'Cl. 22 CPA', value: resultado.valor_com_mora - resultado.valor_final });
                   }
                   
-                  // Dosimetria will not be added to history details as it doesn't represent a financial sum
-
                   addToHistory({
                     source: 'AGRESE',
                     contract: 'CPA',
@@ -882,7 +870,15 @@ export default function SimuladorAGRESE() {
                     detalhes: detalhes,
                     image: imageData
                   });
-                  alert('Estimativa salva no histórico da aba!');
+
+                  if (linkedEstimateId) {
+                    updateOcorrencia(linkedEstimateId, {
+                      valor: resultado.valor_com_mora,
+                      descricaoCustom: `Penalidade simulada (AGRESE): ${resultado.ufp_quantidade} UFP/SE. Mora inclusa.`.substring(0, 500)
+                    });
+                  }
+
+                  alert('Estimativa salva no histórico!');
                 }}
                 className="btn-success"
                 style={{ flex: 1, padding: '12px', fontSize: '0.8rem', fontWeight: 700, gap: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#10b981', border: 'none', color: 'white' }}
@@ -1009,7 +1005,7 @@ export default function SimuladorAGRESE() {
               </div>
               <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)', lineHeight: 1.6 }}>
                 Multa aplicada com base na <b style={{ color: 'var(--text-secondary)' }}>Cláusula 22.1.2 do CPA</b> — 
-                Regime sancionatório da AGRESE. UFP/SE conforme <b style={{ color: 'var(--text-secondary)' }}>Portaria SEFAZ-SE nº 86/2026</b>.
+                Regime sancionatório da AGRESE. UFP/SE conforme <b style={{ color: 'var(--text-secondary)' }}>{settings.portaria_ref}</b>.
                 Dosimetria: <b style={{ color: 'var(--text-secondary)' }}>Cláusulas 22.11 e 22.12 do CPA</b>.
                 Mora: IPCA + 1% a.m. (pro rata die) após {PARAMETROS_DEFAULT.PRAZO_PAGAMENTO_DIAS} dias do trânsito em julgado.
                 Resolução AGRESE nº 96/2025.

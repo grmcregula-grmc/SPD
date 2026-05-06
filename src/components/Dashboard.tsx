@@ -720,7 +720,6 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
                     </div>
                     <div style={{ textAlign: 'right', marginLeft: 16 }}>
                       <div style={{ fontSize: '1rem', fontWeight: 900, color: '#1e293b' }}>{formatBRL(est.valor)}</div>
-                      <span style={{ fontSize: '0.6rem', fontWeight: 800, color: '#64748b' }}>UFP: {(est.valor / ufp).toFixed(1)}</span>
                     </div>
                   </div>
 
@@ -760,7 +759,7 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
                     <span style={{ fontSize: '0.65rem', fontWeight: 800, color: '#64748b', display: 'flex', alignItems: 'center' }}>SIMULAR:</span>
                     <button 
                       onClick={() => {
-                        setDraftProcess({ id_doc: est.identificador || est.id, assunto: est.nomeCustom || est.titulo, solicitante: '', data_recebimento: est.data, prazo_externo: '', atraso_dias: 0, infracao_sugerida: est.descricaoCustom || est.descricao, contexto: '' });
+                        setDraftProcess({ original_id: est.id, id_doc: est.identificador || est.id, assunto: est.nomeCustom || est.titulo, solicitante: '', data_recebimento: est.data, prazo_externo: '', atraso_dias: 0, infracao_sugerida: est.descricaoCustom || est.descricao, contexto: '' });
                         onNavigate && onNavigate('agrese');
                       }}
                       style={{ padding: '4px 10px', borderRadius: 6, background: '#3b82f6', color: 'white', fontSize: '0.65rem', fontWeight: 800, border: 'none', cursor: 'pointer' }}
@@ -769,7 +768,7 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
                     </button>
                     <button 
                       onClick={() => {
-                        setDraftProcess({ id_doc: est.identificador || est.id, assunto: est.nomeCustom || est.titulo, solicitante: '', data_recebimento: est.data, prazo_externo: '', atraso_dias: 0, infracao_sugerida: est.descricaoCustom || est.descricao, contexto: '' });
+                        setDraftProcess({ original_id: est.id, id_doc: est.identificador || est.id, assunto: est.nomeCustom || est.titulo, solicitante: '', data_recebimento: est.data, prazo_externo: '', atraso_dias: 0, infracao_sugerida: est.descricaoCustom || est.descricao, contexto: '' });
                         onNavigate && onNavigate('equacaod');
                       }}
                       style={{ padding: '4px 10px', borderRadius: 6, background: '#8b5cf6', color: 'white', fontSize: '0.65rem', fontWeight: 800, border: 'none', cursor: 'pointer' }}
@@ -778,7 +777,7 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
                     </button>
                     <button 
                       onClick={() => {
-                        setDraftProcess({ id_doc: est.identificador || est.id, assunto: est.nomeCustom || est.titulo, solicitante: '', data_recebimento: est.data, prazo_externo: '', atraso_dias: 0, infracao_sugerida: est.descricaoCustom || est.descricao, contexto: '' });
+                        setDraftProcess({ original_id: est.id, id_doc: est.identificador || est.id, assunto: est.nomeCustom || est.titulo, solicitante: '', data_recebimento: est.data, prazo_externo: '', atraso_dias: 0, infracao_sugerida: est.descricaoCustom || est.descricao, contexto: '' });
                         onNavigate && onNavigate('combinacao');
                       }}
                       style={{ padding: '4px 10px', borderRadius: 6, background: '#ef4444', color: 'white', fontSize: '0.65rem', fontWeight: 800, border: 'none', cursor: 'pointer' }}

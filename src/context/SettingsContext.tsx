@@ -36,7 +36,7 @@ const INITIAL_SETTINGS: Settings = {
   ica_cobertura: PARAMETROS_DEFAULT.ICA_COBERTURA_AGUA,
   ice_cobertura: PARAMETROS_DEFAULT.ICE_COBERTURA_ESGOTO,
   ipd: PARAMETROS_DEFAULT.IPD_PADRAO,
-  portaria_ref: 'Portaria SEFAZ-SE nº 86/2026',
+  portaria_ref: 'Portaria SEFAZ-SE (vigente)',
   resolucao_ref: 'AGRESE 96/2025',
   normas: NORMAS_INICIAIS,
 };

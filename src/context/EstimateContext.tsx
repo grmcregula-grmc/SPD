@@ -32,6 +32,7 @@ export interface SavedEstimate {
 
 export interface DraftProcess {
   id_doc: string;
+  original_id?: string;
   solicitante: string;
   assunto: string;
   data_recebimento: string;

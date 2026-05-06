@@ -25,7 +25,10 @@ export default function SimuladorEquacaoD() {
   const [iceEsgoto, setIceEsgoto] = useState(PARAMETROS_DEFAULT.ICE_COBERTURA_ESGOTO);
   const [impostos, setImpostos] = useState(PARAMETROS_DEFAULT.IMPOSTOS_RECEITA);
   const [resultado, setResultado] = useState<ResultadoEquacaoD | null>(null);
-  const { addToHistory, draftProcess, setDraftProcess } = useEstimates();
+  const { addToHistory, draftProcess, setDraftProcess, updateOcorrencia } = useEstimates();
+  const [dataOcorrencia, setDataOcorrencia] = useState(new Date().toISOString().split('T')[0]);
+  const [descricaoOcorrencia, setDescricaoOcorrencia] = useState('');
+  const [linkedEstimateId, setLinkedEstimateId] = useState<string | null>(null);
   const resultRef = React.useRef<HTMLDivElement>(null);
 
   // Sincronizar com configurações globais
@@ -38,6 +41,9 @@ export default function SimuladorEquacaoD() {
   // Efeito para carregar rascunho da planilha
   React.useEffect(() => {
     if (draftProcess) {
+      if (draftProcess.original_id) {
+        setLinkedEstimateId(draftProcess.original_id);
+      }
       // Se o assunto envolver "Volume", "Parada" ou "Redução", preenchemos o contexto
       const assunto = draftProcess.assunto || '';
       const isVolume = assunto.toLowerCase().includes('volume') || 
@@ -83,6 +89,7 @@ export default function SimuladorEquacaoD() {
     setIceEsgoto(PARAMETROS_DEFAULT.ICE_COBERTURA_ESGOTO);
     setImpostos(PARAMETROS_DEFAULT.IMPOSTOS_RECEITA);
     setResultado(null);
+    setLinkedEstimateId(null);
   };
 
   const previewMultiplicador = 1 + (icaAgua / iceEsgoto);
@@ -326,21 +333,31 @@ export default function SimuladorEquacaoD() {
                   if (!resultado) return;
                   const imageData = await captureElement(resultRef.current);
 
+                  const details = resultado.etapas
+                    .filter(e => e.unidade === 'R$' || e.numero === 7)
+                    .map(e => ({ 
+                      label: e.titulo, 
+                      clause: 'Cálculo CI', 
+                      value: e.resultado 
+                    }));
+
                   addToHistory({
                     source: 'EQUACAO_D',
                     contract: 'CI',
                     titulo: `Impacto CI — ${resultado.volume_nao_fornecido.toLocaleString()} m³`,
                     descricao: `Desconto por volume não fornecido conforme Cl. 11.2 do CI.`,
                     valor: resultado.desconto_d,
-                    detalhes: resultado.etapas
-                      .filter(e => e.unidade === 'R$' || e.numero === 7)
-                      .map(e => ({ 
-                        label: e.titulo, 
-                        clause: 'Cálculo CI', 
-                        value: e.resultado 
-                      })),
+                    detalhes: details,
                     image: imageData
                   });
+
+                  if (linkedEstimateId) {
+                    updateOcorrencia(linkedEstimateId, {
+                      valor: resultado.desconto_d,
+                      descricaoCustom: `Desconto CI (Eq. D): Vol. ${formatM3(resultado.volume_nao_fornecido)} | Fat. R$ ${resultado.desconto_d.toFixed(2)}`
+                    });
+                  }
+                  
                   alert('Estimativa salva no histórico da aba!');
                 }}
                 className="btn-success"

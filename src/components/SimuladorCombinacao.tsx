@@ -59,8 +59,9 @@ export default function SimuladorCombinacao() {
   const [multatCIPerc, setMultaCIPerc] = useState(1);
 
   const [resultado, setResultado] = useState<ResultadoCombinacao | null>(null);
-  const { addToHistory, draftProcess, setDraftProcess } = useEstimates();
+  const { addToHistory, draftProcess, setDraftProcess, updateOcorrencia } = useEstimates();
   const resultRef = React.useRef<HTMLDivElement>(null);
+  const [linkedEstimateId, setLinkedEstimateId] = useState<string | null>(null);
 
   React.useEffect(() => {
     setIpd(settings.ipd);
@@ -71,6 +72,9 @@ export default function SimuladorCombinacao() {
   // Efeito para carregar rascunho da planilha
   React.useEffect(() => {
     if (draftProcess) {
+      if (draftProcess.original_id) {
+        setLinkedEstimateId(draftProcess.original_id);
+      }
       const assunto = draftProcess.assunto || '';
       const isVolume = assunto.toLowerCase().includes('volume') || 
                        assunto.toLowerCase().includes('parada') ||
@@ -561,7 +565,15 @@ export default function SimuladorCombinacao() {
                     detalhes: detalhes,
                     image: imageData
                   });
-                  alert('Estimativa salva no histórico da aba!');
+
+                  if (linkedEstimateId) {
+                    updateOcorrencia(linkedEstimateId, {
+                      valor: resultado.total_impacto,
+                      descricaoCustom: `Impacto Combinado: ${formatBRL(resultado.total_impacto)}. ${resultado.descricao_cenario}`.substring(0, 500)
+                    });
+                  }
+
+                  alert('Estimativa salva no histórico!');
                 }}
                 className="btn-success"
                 style={{ flex: 1, padding: '12px', fontSize: '0.8rem', fontWeight: 700, gap: 8, display: 'flex', alignItems: 'center', justifyContent: 'center', background: '#10b981', border: 'none', color: 'white' }}
