@@ -767,3 +767,18 @@ export function getRiskLevel(value: number): { label: string; color: string; bg:
   if (value >= 100000) return { label: 'MÉDIO', color: '#d97706', bg: '#fffbeb' };
   return { label: 'BAIXO', color: '#16a34a', bg: '#f0fdf4' };
 }
+
+/**
+ * Retorna o nível de risco com base na quantidade de UFPs da infração.
+ * Alinhado com a Matriz de Infrações AGRESE (Lei 6.661/2009):
+ *   Leve       =   100 UFPs → BAIXO
+ *   Média      = 1.000 UFPs → MÉDIO
+ *   Grave      = 5.000 UFPs → ALTO
+ *   Gravíssima = 10.000 UFPs → CRÍTICO
+ */
+export function getRiskLevelByUFP(ufpQuantidade: number): { label: string; color: string; bg: string } {
+  if (ufpQuantidade >= 10000) return { label: 'CRÍTICO',  color: '#dc2626', bg: '#fef2f2' };
+  if (ufpQuantidade >= 5000)  return { label: 'ALTO',     color: '#ea580c', bg: '#fff7ed' };
+  if (ufpQuantidade >= 1000)  return { label: 'MÉDIO',    color: '#d97706', bg: '#fffbeb' };
+  return                             { label: 'BAIXO',    color: '#16a34a', bg: '#f0fdf4' };
+}

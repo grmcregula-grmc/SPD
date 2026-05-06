@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { formatBRL, getRiskLevel } from '@/lib/calculators';
+import { formatBRL, getRiskLevel, getRiskLevelByUFP } from '@/lib/calculators';
 
 interface StatCardProps {
   label?: string;
@@ -149,16 +149,24 @@ export function BreakdownRow({ descricao, valor, tipo, percentual }: BreakdownRo
 // ======= Risk Alert =======
 interface RiskAlertProps {
   value: number;
+  /** Quando fornecido, classifica o risco pela gravidade da infração (UFPs)
+   *  em vez do valor monetário. Alinhado com a Matriz AGRESE:
+   *  Leve=100 → BAIXO | Média=1.000 → MÉDIO | Grave=5.000 → ALTO | Gravíssima=10.000 → CRÍTICO */
+  ufpQuantidade?: number;
   label?: string;
 }
 
-export function RiskAlert({ value, label }: RiskAlertProps) {
-  const risk = getRiskLevel(value);
-  const messages = {
-    CRÍTICO: 'Ação imediata obrigatória. Risco de comprometimento severo do fluxo de caixa.',
-    ALTO: 'Atenção urgente necessária. Considere estratégias de mitigação.',
-    MÉDIO: 'Monitoramento contínuo recomendado. Avalie medidas preventivas.',
-    BAIXO: 'Risco gerenciável. Mantenha conformidade preventiva.',
+export function RiskAlert({ value, ufpQuantidade, label }: RiskAlertProps) {
+  // Prioriza UFP quando disponível (mais preciso para infrações AGRESE)
+  const risk = ufpQuantidade !== undefined
+    ? getRiskLevelByUFP(ufpQuantidade)
+    : getRiskLevel(value);
+
+  const messages: Record<string, string> = {
+    'CRÍTICO': 'Ação imediata obrigatória. Penalidade máxima — infração gravíssima (Lei 6.661/2009).',
+    'ALTO':    'Atenção urgente necessária. Infração grave — considere estratégias de mitigação.',
+    'MÉDIO':   'Monitoramento contínuo recomendado. Infração média — avalie medidas preventivas.',
+    'BAIXO':   'Risco gerenciável. Infração leve — mantenha conformidade preventiva.',
   };
 
   return (
@@ -196,9 +204,22 @@ export function RiskAlert({ value, label }: RiskAlertProps) {
           <span style={{ fontSize: '0.7rem', fontWeight: 800, color: risk.color, letterSpacing: '0.1em' }}>
             NÍVEL DE RISCO: {risk.label}
           </span>
+          {ufpQuantidade !== undefined && (
+            <span style={{
+              fontSize: '0.6rem',
+              fontWeight: 700,
+              color: risk.color,
+              background: `${risk.color}15`,
+              border: `1px solid ${risk.color}30`,
+              borderRadius: 4,
+              padding: '1px 6px',
+            }}>
+              {ufpQuantidade.toLocaleString('pt-BR')} UFPs
+            </span>
+          )}
         </div>
         <div style={{ fontSize: '0.8rem', color: 'var(--text-secondary)', lineHeight: 1.4 }}>
-          {label || messages[risk.label as keyof typeof messages]}
+          {label || messages[risk.label] || ''}
         </div>
       </div>
     </div>

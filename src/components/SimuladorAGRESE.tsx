@@ -834,9 +834,9 @@ export default function SimuladorAGRESE() {
                   }
 
                   const nivelRiscoMulA: 'BAIXO' | 'MODERADO' | 'ALTO' | 'CRITICO' =
-                    resultado.valor_com_mora < 100000 ? 'BAIXO' :
-                    resultado.valor_com_mora < 400000 ? 'MODERADO' :
-                    resultado.valor_com_mora < 800000 ? 'ALTO' : 'CRITICO';
+                    resultado.ufp_quantidade >= 10000 ? 'CRITICO' :
+                    resultado.ufp_quantidade >= 5000  ? 'ALTO' :
+                    resultado.ufp_quantidade >= 1000  ? 'MODERADO' : 'BAIXO';
 
                   const breakdownMulA: import('@/lib/reports').PDFBreakdownItem[] = [
                     { descricao: `Valor Base: ${resultado.ufp_quantidade} UFP/SE × R$ ${resultado.valor_ufp.toFixed(2)}${multiplicadorStr}`, valor: resultado.valor_base },
@@ -1044,7 +1044,7 @@ export default function SimuladorAGRESE() {
             )}
 
             {/* Recomendação de risco */}
-            <RiskAlert value={resultado.valor_com_mora} />
+            <RiskAlert value={resultado.valor_com_mora} ufpQuantidade={resultado.ufp_quantidade} />
 
             {/* Fundamentação */}
             <div className="glass-card" style={{ padding: 16, background: 'rgba(139,92,246,0.04)', border: '1px solid rgba(139,92,246,0.15)' }}>
