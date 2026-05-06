@@ -524,10 +524,10 @@ export default function SimuladorCombinacao() {
                   if (!resultado) return;
                   const imageData = await captureElement(resultRef.current);
 
-                  const nivelRiscoComb: 'BAIXO' | 'MODERADO' | 'ALTO' | 'CRÍTICO' =
+                  const nivelRiscoComb: 'BAIXO' | 'MODERADO' | 'ALTO' | 'CRITICO' =
                     resultado.total_impacto < 150000 ? 'BAIXO' :
                     resultado.total_impacto < 600000 ? 'MODERADO' :
-                    resultado.total_impacto < 1200000 ? 'ALTO' : 'CRÍTICO';
+                    resultado.total_impacto < 1200000 ? 'ALTO' : 'CRITICO';
 
                   const detalhes = [
                     { label: 'Equação D (CI Cl. 11.2)', clause: 'Cl. 11.2 CI', value: resultado.equacao_d },

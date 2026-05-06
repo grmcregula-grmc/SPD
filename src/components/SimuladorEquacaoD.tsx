@@ -307,10 +307,10 @@ export default function SimuladorEquacaoD() {
                   if (!resultado) return;
                   const imageData = await captureElement(resultRef.current);
 
-                  const nivelRiscoEqD: 'BAIXO' | 'MODERADO' | 'ALTO' | 'CRÍTICO' =
+                  const nivelRiscoEqD: 'BAIXO' | 'MODERADO' | 'ALTO' | 'CRITICO' =
                     resultado.desconto_d < 100000 ? 'BAIXO' :
                     resultado.desconto_d < 500000 ? 'MODERADO' :
-                    resultado.desconto_d < 1000000 ? 'ALTO' : 'CRÍTICO';
+                    resultado.desconto_d < 1000000 ? 'ALTO' : 'CRITICO';
 
                   const breakdownEqD = resultado.etapas.map((e, i) => ({
                     descricao: `${e.numero ? `Etapa ${e.numero}: ` : ''}${e.titulo}`,

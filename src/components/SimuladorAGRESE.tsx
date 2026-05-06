@@ -686,10 +686,10 @@ export default function SimuladorAGRESE() {
                   if (!resultadoTaxa) return;
                   const imageData = await captureElement(resultRef.current);
 
-                  const nivelRisco: 'BAIXO' | 'MODERADO' | 'ALTO' | 'CRÍTICO' =
+                  const nivelRisco: 'BAIXO' | 'MODERADO' | 'ALTO' | 'CRITICO' =
                     resultadoTaxa.valor_total < 50000 ? 'BAIXO' :
                     resultadoTaxa.valor_total < 200000 ? 'MODERADO' :
-                    resultadoTaxa.valor_total < 500000 ? 'ALTO' : 'CRÍTICO';
+                    resultadoTaxa.valor_total < 500000 ? 'ALTO' : 'CRITICO';
 
                   generatePDFReport({
                     titulo: 'Relatório de Estimativa de Penalidade',
@@ -833,10 +833,10 @@ export default function SimuladorAGRESE() {
                     paramsTextuais.push({ label: 'Justificativa da Relevância', valor: justificativaRelevancia });
                   }
 
-                  const nivelRiscoMulA: 'BAIXO' | 'MODERADO' | 'ALTO' | 'CRÍTICO' =
+                  const nivelRiscoMulA: 'BAIXO' | 'MODERADO' | 'ALTO' | 'CRITICO' =
                     resultado.valor_com_mora < 100000 ? 'BAIXO' :
                     resultado.valor_com_mora < 400000 ? 'MODERADO' :
-                    resultado.valor_com_mora < 800000 ? 'ALTO' : 'CRÍTICO';
+                    resultado.valor_com_mora < 800000 ? 'ALTO' : 'CRITICO';
 
                   const breakdownMulA: import('@/lib/reports').PDFBreakdownItem[] = [
                     { descricao: `Valor Base: ${resultado.ufp_quantidade} UFP/SE × R$ ${resultado.valor_ufp.toFixed(2)}${multiplicadorStr}`, valor: resultado.valor_base },
