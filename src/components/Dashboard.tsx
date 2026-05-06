@@ -7,6 +7,7 @@ import { useEstimates } from '@/context/EstimateContext';
 import { isSupabaseConfigured } from '@/lib/supabase';
 import { generatePDFReport } from '@/lib/reports';
 import { ParamInput } from '@/components/ui';
+import { PROCESSOS_REAIS } from '@/lib/dadosReaisProcessos';
 import { 
   PieChart, Pie, Cell, ResponsiveContainer, Tooltip, Legend,
   BarChart, Bar, XAxis, YAxis, CartesianGrid, AreaChart, Area
@@ -26,6 +27,7 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
   const [selectedEstimates, setSelectedEstimates] = React.useState<string[]>([]);
   const [editingOcorrId, setEditingOcorrId] = React.useState<string | null>(null);
   const [selectedContract, setSelectedContract] = React.useState<'Ambos' | 'CPA' | 'CI'>('Ambos');
+  const [importandoDados, setImportandoDados] = React.useState(false);
   const [ocorrForm, setOcorrForm] = React.useState<{ identificador: string; nomeCustom: string; descricaoCustom: string; classificacao: string; data: string }>({ 
     identificador: '', 
     nomeCustom: '', 
@@ -33,6 +35,26 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
     classificacao: 'De Fato',
     data: ''
   });
+
+  /** Importa todos os processos reais da planilha GRMC 2025/2026 */
+  const handleImportarDadosReais = () => {
+    setImportandoDados(true);
+    const jaExistentes = new Set(consolidated.map(e => e.identificador).filter(Boolean));
+    let adicionados = 0;
+    PROCESSOS_REAIS.forEach((proc, idx) => {
+      if (proc.identificador && jaExistentes.has(proc.identificador)) return;
+      const est = {
+        ...proc,
+        id: `REAL-${Date.now()}-${idx}`,
+      };
+      setTimeout(() => addToConsolidated(est), idx * 30);
+      adicionados++;
+    });
+    setTimeout(() => {
+      setImportandoDados(false);
+      alert(`✅ ${adicionados} processo(s) importado(s) com sucesso!\n\nOs dados da planilha GRMC 2025/2026 já estão no Painel de Gestão Ativa.`);
+    }, PROCESSOS_REAIS.length * 30 + 200);
+  };
 
   React.useEffect(() => {
     if (editingOcorrId) {
@@ -646,7 +668,24 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
                 <h3 style={{ fontSize: '0.9rem', fontWeight: 800, color: '#059669', textTransform: 'uppercase', letterSpacing: 1 }}>Itens de Gestão Ativa</h3>
                 <p style={{ fontSize: '0.7rem', color: 'var(--text-muted)' }}>Ocorrências integradas ao cálculo de passivo</p>
               </div>
-              <button onClick={clearConsolidated} style={{ fontSize: '0.7rem', fontWeight: 800, color: '#ef4444', background: 'none', border: 'none', cursor: 'pointer', textDecoration: 'underline' }}>Limpar Gestão</button>
+              <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                <button
+                  onClick={handleImportarDadosReais}
+                  disabled={importandoDados}
+                  title="Importar processos reais da Planilha GRMC 2025/2026"
+                  style={{
+                    fontSize: '0.65rem', fontWeight: 800, color: 'white',
+                    background: importandoDados ? '#94a3b8' : 'linear-gradient(135deg, #1e3a8a, #3b82f6)',
+                    border: 'none', cursor: importandoDados ? 'not-allowed' : 'pointer',
+                    padding: '5px 10px', borderRadius: 8, display: 'flex', alignItems: 'center', gap: 4,
+                    boxShadow: '0 2px 8px rgba(59,130,246,0.3)'
+                  }}
+                >
+                  {importandoDados ? '⏳ Importando...' : '📋 Importar Planilha GRMC'}
+                </button>
+                <button onClick={clearConsolidated} style={{ fontSize: '0.7rem', fontWeight: 800, color: '#ef4444', background: 'none', border: 'none', cursor: 'pointer', textDecoration: 'underline' }}>Limpar Gestão</button>
+              </div>
+
             </div>
 
             <div style={{ flex: 1, overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: 12, paddingRight: 8 }}>
