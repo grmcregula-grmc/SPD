@@ -761,7 +761,7 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
                     <button 
                       onClick={() => {
                         setDraftProcess({ id_doc: est.identificador || est.id, assunto: est.nomeCustom || est.titulo, solicitante: '', data_recebimento: est.data, prazo_externo: '', atraso_dias: 0, infracao_sugerida: est.descricaoCustom || est.descricao, contexto: '' });
-                        onNavigate && onNavigate('AGRESE');
+                        onNavigate && onNavigate('agrese');
                       }}
                       style={{ padding: '4px 10px', borderRadius: 6, background: '#3b82f6', color: 'white', fontSize: '0.65rem', fontWeight: 800, border: 'none', cursor: 'pointer' }}
                     >
@@ -770,7 +770,7 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
                     <button 
                       onClick={() => {
                         setDraftProcess({ id_doc: est.identificador || est.id, assunto: est.nomeCustom || est.titulo, solicitante: '', data_recebimento: est.data, prazo_externo: '', atraso_dias: 0, infracao_sugerida: est.descricaoCustom || est.descricao, contexto: '' });
-                        onNavigate && onNavigate('EQUACAO_D');
+                        onNavigate && onNavigate('equacaod');
                       }}
                       style={{ padding: '4px 10px', borderRadius: 6, background: '#8b5cf6', color: 'white', fontSize: '0.65rem', fontWeight: 800, border: 'none', cursor: 'pointer' }}
                     >
@@ -779,7 +779,7 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
                     <button 
                       onClick={() => {
                         setDraftProcess({ id_doc: est.identificador || est.id, assunto: est.nomeCustom || est.titulo, solicitante: '', data_recebimento: est.data, prazo_externo: '', atraso_dias: 0, infracao_sugerida: est.descricaoCustom || est.descricao, contexto: '' });
-                        onNavigate && onNavigate('COMBINACAO_PENALIDADES');
+                        onNavigate && onNavigate('combinacao');
                       }}
                       style={{ padding: '4px 10px', borderRadius: 6, background: '#ef4444', color: 'white', fontSize: '0.65rem', fontWeight: 800, border: 'none', cursor: 'pointer' }}
                     >
