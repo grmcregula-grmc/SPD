@@ -150,7 +150,9 @@ export const MATRIZ_INFRACOES = [
     fundamentacao: 'Art. 24-A, § 2º, I; e § 3º, incisos I e II', 
     desc: 'Não fornecer, no prazo fixado, documento e/ou dado solicitado pela AGRESE. Outras hipóteses previstas em atos regulamentares.',
     hipoteses: [
-      'Não fornecer, no prazo fixado, documento e/ou dado solicitado pela AGRESE (a multa é aplicada por cada documento ou dado não fornecido).',
+      'Não fornecer, no prazo fixado, documento e/ou dado solicitado pela AGRESE (aplicado por documento/dado).',
+      'Pequenas irregularidades administrativas sem prejuízo direto à prestação do serviço.',
+      'Atraso de até 5 dias úteis no envio de relatórios de rotina.',
       'Outras hipóteses que venham a ser previstas em atos regulamentares da AGRESE.'
     ],
     baseLegal: 'Lei Nº 6.661/2009'
@@ -162,10 +164,11 @@ export const MATRIZ_INFRACOES = [
     fundamentacao: 'Art. 24-A, § 2º, II; e § 4º, incisos I a V', 
     desc: 'Reincidência em infrações leves anteriores. Sonegação de informações. Descumprimento de prazos. Falha na prestação do serviço.',
     hipoteses: [
-      'Reincidência em infrações leves anteriores.',
-      'Sonegação de informações solicitadas pela agência reguladora.',
-      'Descumprimento, no prazo fixado, de determinações feitas pela AGRESE.',
-      'Falha na prestação do serviço concedido, permitido ou autorizado.',
+      'Reincidência em infrações leves anteriores nos últimos 12 meses.',
+      'Sonegação de informações solicitadas formalmente pela agência reguladora.',
+      'Descumprimento de prazos fixados em determinações ou ordens de serviço da AGRESE.',
+      'Falha parcial na prestação do serviço que não comprometa a continuidade sistêmica.',
+      'Atraso superior a 10 dias úteis no envio de informações obrigatórias mensais.',
       'Outras hipóteses previstas em ato regulamentar.'
     ],
     baseLegal: 'Lei Nº 6.661/2009'
@@ -177,11 +180,12 @@ export const MATRIZ_INFRACOES = [
     fundamentacao: 'Art. 24-A, § 2º, III; e § 5º, incisos I a VI', 
     desc: 'Reincidência nas infrações médias. Informações adulteradas. Obstrução da fiscalização. Descumprimento da legislação. Grave violação de qualidade.',
     hipoteses: [
-      'Reincidência nas infrações médias (sonegação, descumprimento de prazos, falhas no serviço, etc.).',
-      'Fornecimento de informações e documentos adulterados.',
-      'Obstrução da fiscalização realizada pela AGRESE.',
-      'Descumprimento da legislação, dos atos regulamentares da AGRESE ou do próprio contrato.',
-      'Grave violação dos padrões de qualidade dos serviços.',
+      'Reincidência nas infrações médias.',
+      'Fornecimento de informações e documentos adulterados ou com má-fé comprovada.',
+      'Obstrução direta da atividade de fiscalização técnica da AGRESE.',
+      'Descumprimento grave de cláusulas contratuais de investimento ou operação.',
+      'Grave violação dos padrões de qualidade da água ou continuidade do fornecimento.',
+      'Não atendimento a determinações de urgência para cessar danos ao serviço.',
       'Outras hipóteses previstas em ato regulamentar.'
     ],
     baseLegal: 'Lei Nº 6.661/2009'
@@ -191,9 +195,12 @@ export const MATRIZ_INFRACOES = [
     nome: 'Infração Gravíssima', 
     ufp: 10000, 
     fundamentacao: 'Art. 24-A, § 2º, IV; e § 6º, incisos I e II', 
-    desc: 'Reincidência nas condutas classificadas como graves. Outras hipóteses previstas em ato regulamentar.',
+    desc: 'Reincidência nas condutas classificadas como graves. Danos irreparáveis ou perigo à saúde pública.',
     hipoteses: [
-      'Reincidência nas condutas classificadas como graves (como fornecimento de documentos adulterados, obstrução à fiscalização, descumprimento de legislação/contratos e grave violação dos padrões de qualidade).',
+      'Reincidência nas condutas classificadas como graves.',
+      'Colocar em risco iminente a saúde pública por negligência operacional gravíssima.',
+      'Fraude sistêmica em medidores de vazão ou parâmetros de qualidade da água.',
+      'Abandono do serviço ou paralisação total sem justificativa técnica ou legal.',
       'Outras hipóteses previstas em ato regulamentar.'
     ],
     baseLegal: 'Lei Nº 6.661/2009'
@@ -201,8 +208,9 @@ export const MATRIZ_INFRACOES = [
 ];
 
 export const ENVIO_INFORMACOES = [
-  { id: 'omissao', nome: 'Omissão em Enviar Informações', min_ufp: 100, max_ufp: 500, fundamentacao: 'Art. 6º, caput', baseLegal: 'Res. 01/2018' },
-  { id: 'falsas', nome: 'Informações Falsas ou Obstrução', min_ufp: 100, max_ufp: 10000, fundamentacao: 'Art. 6º, § 2º', baseLegal: 'Res. 01/2018' }
+  { id: 'omissao', nome: 'Omissão no Envio de Informações', min_ufp: 100, max_ufp: 500, fundamentacao: 'Art. 6º, caput', baseLegal: 'Res. 01/2018' },
+  { id: 'atraso_extenso', nome: 'Atraso Crítico (> 30 dias)', min_ufp: 500, max_ufp: 2000, fundamentacao: 'Art. 6º, § 1º', baseLegal: 'Res. 01/2018' },
+  { id: 'falsas', nome: 'Informações Falsas ou Obstrução', min_ufp: 1000, max_ufp: 10000, fundamentacao: 'Art. 6º, § 2º', baseLegal: 'Res. 01/2018' }
 ];
 
 export const CRITERIOS_DOSIMETRIA = [
@@ -440,15 +448,14 @@ export function calcularTaxaFiscalizacao(params: {
   const { valor_original, meses_atraso } = params;
   const selic_mensal = params.selic_mensal_perc ?? 1.07; // % ao mês
 
-  // I — Juros SELIC: acumulados mês a mês (regime composto simplificado)
-  // Contados do mês seguinte, portanto: meses_atraso meses de SELIC
-  const selic_acumulada = parseFloat(
-    (((1 + selic_mensal / 100) ** meses_atraso - 1) * 100).toFixed(4)
-  );
+  // I — Juros SELIC: Simples (acumulados mês a mês)
+  // § 4º — Contados do mês seguinte ao vencimento.
+  // Usamos juros simples por ser o padrão regulatório para SELIC acumulada.
+  const selic_acumulada = parseFloat((meses_atraso * selic_mensal).toFixed(4));
   const juros_valor = valor_original * (selic_acumulada / 100);
 
-  // II — Multa de mora: 2% se ≤ 1 mês, 10% se > 1 mês
-  // (§5º) juros NÃO incidem sobre a multa
+  // II — Multa de mora: 2% se ≤ 1 mês (mês subsequente), 10% se > 1 mês
+  // O tempo de atraso dita ambas as taxas para evitar contradição lógica.
   const multa_percentual = meses_atraso <= 1 ? 2 : 10;
   const multa_valor = valor_original * (multa_percentual / 100);
 

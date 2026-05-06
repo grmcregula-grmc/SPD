@@ -14,7 +14,7 @@ const SPREADSHEET_ID = '1lpMNjbnabICjblaGYCThDUN6lzCvJ7okDYUrUUdzSFo';
 const CSV_URL = `https://docs.google.com/spreadsheets/d/${SPREADSHEET_ID}/gviz/tq?tqx=out:csv&sheet=PROCESSOS`;
 
 export default function SpreadsheetImporter({ onClose, onNavigate }: SpreadsheetImporterProps) {
-  const { setDraftProcess } = useEstimates();
+  const { setDraftProcess, addToConsolidated } = useEstimates();
   const [data, setData] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -82,24 +82,29 @@ export default function SpreadsheetImporter({ onClose, onNavigate }: Spreadsheet
     return 0;
   };
 
-  const handleSelect = (row: any) => {
-    const prazoExterno = row[7]; // Col H
-    const dataFinal = row[15]; // Col P
+
+  const handleImportToManagement = (row: any) => {
+    const prazoExterno = row[7];
+    const dataFinal = row[15];
     const atraso = calculateAtraso(prazoExterno, dataFinal);
 
-    const draft: DraftProcess = {
-      id_doc: row[0],
-      assunto: row[1],
-      solicitante: row[2],
-      data_recebimento: row[3],
-      prazo_externo: prazoExterno,
-      data_final: dataFinal,
-      atraso_dias: atraso,
-      infracao_sugerida: row[11] || 'Omissão/Atraso no envio de informações',
-      contexto: row[12] || ''
-    };
+    addToConsolidated({
+      id: `REAL-IM-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
+      source: 'MANUAL',
+      titulo: row[1],
+      descricao: row[12] || 'Importado da planilha via Painel.',
+      valor: 0,
+      data: new Date().toISOString(),
+      detalhes: [
+        { label: 'Infração Sugerida', clause: row[11] || 'Omissão/Atraso', value: 0 },
+        { label: 'Atraso Calculado (Dias)', clause: 'Prazo Limite', value: atraso }
+      ],
+      identificador: row[0],
+      classificacao: 'De Fato'
+    });
 
-    setDraftProcess(draft);
+    onNavigate('dashboard');
+    onClose();
   };
 
   return (
@@ -196,22 +201,10 @@ export default function SpreadsheetImporter({ onClose, onNavigate }: Spreadsheet
                     
                     <div className="flex flex-wrap gap-2 pt-4 border-t border-slate-100">
                       <button 
-                        onClick={() => { handleSelect(row); onNavigate('AGRESE'); }}
-                        className="flex items-center gap-2 px-4 py-2 bg-blue-600 text-white rounded-xl text-xs font-black hover:bg-blue-700 transition-all shadow-lg shadow-blue-200"
+                        onClick={() => handleImportToManagement(row)}
+                        className="flex items-center gap-2 px-4 py-2 bg-emerald-600 text-white rounded-xl text-xs font-black hover:bg-emerald-700 transition-all shadow-lg shadow-emerald-200"
                       >
-                        SIMULAR AGRESE <ArrowRight className="w-3 h-3" />
-                      </button>
-                      <button 
-                        onClick={() => { handleSelect(row); onNavigate('EQUACAO_D'); }}
-                        className="flex items-center gap-2 px-4 py-2 bg-slate-800 text-white rounded-xl text-xs font-black hover:bg-slate-900 transition-all shadow-lg shadow-slate-200"
-                      >
-                        CALCULAR EQUAÇÃO D <ArrowRight className="w-3 h-3" />
-                      </button>
-                      <button 
-                        onClick={() => { handleSelect(row); onNavigate('COMBINACAO_PENALIDADES'); }}
-                        className="flex items-center gap-2 px-4 py-2 bg-white border border-slate-200 text-slate-700 rounded-xl text-xs font-black hover:bg-slate-50 transition-all"
-                      >
-                        COMBINAR PENALIDADES
+                        IMPORTAR PARA GESTÃO ATIVA <ArrowRight className="w-3 h-3" />
                       </button>
                     </div>
                   </div>

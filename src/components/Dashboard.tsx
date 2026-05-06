@@ -20,7 +20,7 @@ interface DashboardProps {
 
 export default function Dashboard({ onNavigate }: DashboardProps) {
   const { settings, updateSettings } = useSettings();
-  const { history, consolidated, addToConsolidated, clearConsolidated, updateClassificacao, removeFromConsolidated, updateOcorrencia } = useEstimates();
+  const { history, consolidated, addToConsolidated, clearConsolidated, updateClassificacao, removeFromConsolidated, updateOcorrencia, setDraftProcess } = useEstimates();
   const ufp = settings.ufp_valor;
 
 
@@ -30,12 +30,13 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
   const [selectedContract, setSelectedContract] = React.useState<'Ambos' | 'CPA' | 'CI'>('Ambos');
   const [importandoDados, setImportandoDados] = React.useState(false);
   const [showImporter, setShowImporter] = React.useState(false);
-  const [ocorrForm, setOcorrForm] = React.useState<{ identificador: string; nomeCustom: string; descricaoCustom: string; classificacao: string; data: string }>({ 
+  const [ocorrForm, setOcorrForm] = React.useState<{ identificador: string; nomeCustom: string; descricaoCustom: string; classificacao: string; data: string; valor: number }>({ 
     identificador: '', 
     nomeCustom: '', 
     descricaoCustom: '', 
     classificacao: 'De Fato',
-    data: ''
+    data: '',
+    valor: 0
   });
 
   /** Importa todos os processos reais da planilha GRMC 2025/2026 */
@@ -67,7 +68,8 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
           nomeCustom: item.nomeCustom || item.titulo,
           descricaoCustom: item.descricaoCustom || item.descricao,
           classificacao: item.classificacao || 'De Fato',
-          data: item.data.split('T')[0]
+          data: item.data.split('T')[0],
+          valor: item.valor || 0
         });
       }
     }
@@ -273,19 +275,9 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
           </div>
         </div>
       </div>
-      {/* PESQUISA E ACESSOS RÁPIDOS */}
+      {/* ACESSOS RÁPIDOS */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: 16, marginBottom: 28 }}>
-        <div className="glass-card" style={{ padding: '8px 16px', display: 'flex', alignItems: 'center', gap: 12, background: 'white' }}>
-          <span style={{ fontSize: '1.2rem' }}>🔍</span>
-          <input 
-            type="text" 
-            placeholder="Pesquisar instrumentos, cláusulas, processos ou normas de compliance..." 
-            style={{ flex: 1, border: 'none', outline: 'none', fontSize: '0.95rem', padding: '12px 0', background: 'transparent', fontWeight: 500 }}
-          />
-          <div style={{ display: 'flex', gap: 8 }}>
-            <span style={{ fontSize: '0.7rem', fontWeight: 800, color: '#94a3b8', background: '#f1f5f9', padding: '4px 8px', borderRadius: 6 }}>CTRL + K</span>
-          </div>
-        </div>
+
 
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16 }}>
           {[
@@ -743,10 +735,10 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
 
                   <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 4, marginTop: 12 }}>
                     {[
-                      { id: 'Penalidade de Fato', label: '⚖️ Fato', color: '#ef4444' },
-                      { id: 'Alto Risco de Penalização', label: '🔴 Alto Risco', color: '#f97316' },
-                      { id: 'Risco Moderado de Penalização', label: '🟡 Moderado', color: '#f59e0b' },
-                      { id: 'Baixo Risco de Penalização', label: '⬜ Baixo Risco', color: '#94a3b8' },
+                      { id: 'Penalidade de Fato', label: '⚖️ Penalidade de Fato', color: '#ef4444' },
+                      { id: 'Alto Risco de Penalização', label: '🔴 Alto Risco de Penalização', color: '#f97316' },
+                      { id: 'Risco Moderado de Penalização', label: '🟡 Risco Moderado', color: '#f59e0b' },
+                      { id: 'Baixo Risco de Penalização', label: '⬜ Baixo Risco de Penalização', color: '#94a3b8' },
                     ].map(cat => (
                       <button 
                         key={cat.id} 
@@ -762,6 +754,37 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
                         {cat.label}
                       </button>
                     ))}
+                  </div>
+
+                  <div style={{ display: 'flex', gap: 8, marginTop: 12, flexWrap: 'wrap' }}>
+                    <span style={{ fontSize: '0.65rem', fontWeight: 800, color: '#64748b', display: 'flex', alignItems: 'center' }}>SIMULAR:</span>
+                    <button 
+                      onClick={() => {
+                        setDraftProcess({ id_doc: est.identificador || est.id, assunto: est.nomeCustom || est.titulo, solicitante: '', data_recebimento: est.data, prazo_externo: '', atraso_dias: 0, infracao_sugerida: est.descricaoCustom || est.descricao, contexto: '' });
+                        onNavigate && onNavigate('AGRESE');
+                      }}
+                      style={{ padding: '4px 10px', borderRadius: 6, background: '#3b82f6', color: 'white', fontSize: '0.65rem', fontWeight: 800, border: 'none', cursor: 'pointer' }}
+                    >
+                      AGRESE
+                    </button>
+                    <button 
+                      onClick={() => {
+                        setDraftProcess({ id_doc: est.identificador || est.id, assunto: est.nomeCustom || est.titulo, solicitante: '', data_recebimento: est.data, prazo_externo: '', atraso_dias: 0, infracao_sugerida: est.descricaoCustom || est.descricao, contexto: '' });
+                        onNavigate && onNavigate('EQUACAO_D');
+                      }}
+                      style={{ padding: '4px 10px', borderRadius: 6, background: '#8b5cf6', color: 'white', fontSize: '0.65rem', fontWeight: 800, border: 'none', cursor: 'pointer' }}
+                    >
+                      EQUAÇÃO D
+                    </button>
+                    <button 
+                      onClick={() => {
+                        setDraftProcess({ id_doc: est.identificador || est.id, assunto: est.nomeCustom || est.titulo, solicitante: '', data_recebimento: est.data, prazo_externo: '', atraso_dias: 0, infracao_sugerida: est.descricaoCustom || est.descricao, contexto: '' });
+                        onNavigate && onNavigate('COMBINACAO_PENALIDADES');
+                      }}
+                      style={{ padding: '4px 10px', borderRadius: 6, background: '#ef4444', color: 'white', fontSize: '0.65rem', fontWeight: 800, border: 'none', cursor: 'pointer' }}
+                    >
+                      COMBINAR
+                    </button>
                   </div>
                 </div>
               ))}
@@ -912,6 +935,17 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
               </div>
 
               <div>
+                <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 800, color: '#64748b', marginBottom: 6, textTransform: 'uppercase' }}>Valor da Penalidade (Edição Manual) - R$</label>
+                <input 
+                  type="number"
+                  step="0.01"
+                  value={ocorrForm.valor || 0}
+                  onChange={(e) => setOcorrForm(p => ({ ...p, valor: parseFloat(e.target.value) || 0 }))}
+                  style={{ width: '100%', padding: '12px', borderRadius: 10, border: '1px solid #e2e8f0', fontSize: '0.9rem', fontWeight: 600 }}
+                />
+              </div>
+
+              <div>
                 <label style={{ display: 'block', fontSize: '0.75rem', fontWeight: 800, color: '#64748b', marginBottom: 6, textTransform: 'uppercase' }}>Título / Nome do Evento</label>
                 <input 
                   type="text"
@@ -973,7 +1007,8 @@ export default function Dashboard({ onNavigate }: DashboardProps) {
                         nomeCustom: ocorrForm.nomeCustom,
                         descricaoCustom: ocorrForm.descricaoCustom,
                         classificacao: ocorrForm.classificacao as any,
-                        data: ocorrForm.data ? new Date(ocorrForm.data).toISOString() : undefined
+                        data: ocorrForm.data ? new Date(ocorrForm.data).toISOString() : undefined,
+                        valor: ocorrForm.valor
                       });
                       setEditingOcorrId(null);
                     }

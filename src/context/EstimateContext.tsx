@@ -52,7 +52,7 @@ interface EstimateContextType {
   removeFromConsolidated: (id: string) => void;
   clearConsolidated: () => void;
   updateClassificacao: (id: string, classificacao: ClassificacaoEstimate) => void;
-  updateOcorrencia: (id: string, fields: Partial<Pick<SavedEstimate, 'identificador' | 'nomeCustom' | 'descricaoCustom' | 'classificacao' | 'data'>>) => void;
+  updateOcorrencia: (id: string, fields: Partial<Pick<SavedEstimate, 'identificador' | 'nomeCustom' | 'descricaoCustom' | 'classificacao' | 'data' | 'valor'>>) => void;
 
   draftProcess: DraftProcess | null;
   setDraftProcess: (draft: DraftProcess | null) => void;
@@ -135,7 +135,7 @@ export function EstimateProvider({ children }: { children: React.ReactNode }) {
     setConsolidated(prev => prev.map(e => e.id === id ? { ...e, classificacao } : e));
   };
 
-  const updateOcorrencia = (id: string, fields: Partial<Pick<SavedEstimate, 'identificador' | 'nomeCustom' | 'descricaoCustom' | 'classificacao' | 'data'>>) => {
+  const updateOcorrencia = (id: string, fields: Partial<Pick<SavedEstimate, 'identificador' | 'nomeCustom' | 'descricaoCustom' | 'classificacao' | 'data' | 'valor'>>) => {
     setHistory(prev => prev.map(e => e.id === id ? { ...e, ...fields } : e));
     setConsolidated(prev => prev.map(e => e.id === id ? { ...e, ...fields } : e));
   };
